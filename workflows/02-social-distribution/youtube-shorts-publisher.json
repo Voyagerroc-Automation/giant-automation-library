@@ -1,0 +1,46 @@
+﻿{
+  "name": "YouTube Shorts Automated Publisher & Scheduler",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "publish-youtube-short",
+        "options": {}
+      },
+      "name": "Shorts Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [100, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "const item = $input.item.json.body || $input.item.json;\nconst videoPath = item.videoPath || 'C:/Users/erol_/Downloads/final_short.mp4';\nconst title = item.title || 'Epic AI Movie Battle #Shorts';\nconst tags = item.tags || ['#Shorts', '#AI', '#Filmmaking', '#Seedance', '#Voyagerroc'];\n\nreturn {\n  json: {\n    videoPath: videoPath,\n    title: title,\n    description: `${title}\\n\\nGenerated with Voyagerroc Automation Engine & Seedance 2.5\\n\\n${tags.join(' ')}`,\n    tags: tags,\n    privacy: 'public',\n    scheduledTime: new Date(Date.now() + 3600000).toISOString()\n  }\n};"
+      },
+      "name": "Format Metadata & SEO",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [320, 300]
+    },
+    {
+      "parameters": {
+        "url": "http://localhost:8000/api/distribution/youtube-upload",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json) }}",
+        "options": {}
+      },
+      "name": "Upload via YouTube Shorts Pipeline",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [540, 300]
+    }
+  ],
+  "connections": {
+    "Shorts Webhook": {
+      "main": [[{ "node": "Format Metadata & SEO", "type": "main", "index": 0 }]]
+    },
+    "Format Metadata & SEO": {
+      "main": [[{ "node": "Upload via YouTube Shorts Pipeline", "type": "main", "index": 0 }]]
+    }
+  }
+}

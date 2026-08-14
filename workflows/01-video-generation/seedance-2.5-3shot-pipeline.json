@@ -1,0 +1,61 @@
+﻿{
+  "name": "Higgsfield Seedance 2.5 - 3-Shot (30s) Cinematic Pipeline",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "generate-seedance-video",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "name": "Webhook Trigger",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [100, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "const body = $input.item.json.body || $input.item.json;\nconst title = body.title || 'Cinematic Epic Fight';\nconst characters = body.characters || '@hero (warrior in dark battle armor), @monster (4m crystal blade creature)';\nconst atmosphere = body.atmosphere || 'Grimdark, 20m fog visibility, cinematic anamorphic lighting';\n\n// 3-Shot (30s) Seedance 2.5 Prompt Architecture\nconst shot1 = `[SHOT 1 | 00:00-00:10 | 50mm Lens Setup]\\nAssets: ${characters}, Environment: ${atmosphere}\\nCamera: 8m distance, dollies forward in straight line to 3m height, slowing down at 07.0s.\\nTimecode: 0.0s-3.0s: Character reveals stance, snow particles lift from boots. 3.0s-7.5s: Energy core glows cyan, weapon unsheathes with metallic scrape. 7.5s-10.0s: Locks into battle ready posture for match cut.`;\n\nconst shot2 = `[SHOT 2 | 00:10-00:20 | 24mm Low-Angle Escalation]\\nMatch Cut: Poses at 00:10.0 exactly match end of Shot 1.\\nCamera: 180-degree low-angle arc orbiting from 3m to 1.5m radius.\\nTimecode: 0.0s-2.0s: Forward sprint sprint 3x faster than standard dolly. 2.0s-6.0s: 0.2x Bullet-time dilation, blade gap narrows from 50cm to 5cm. 6.0s-10.0s: Normal time returns, crystal blade shatters enemy steel with real sparks and shockwave.`;\n\nconst shot3 = `[SHOT 3 | 00:20-00:30 | 85mm Telephoto to 35mm Wide Heroic Finish]\\nCamera: Starts on 85mm eye close-up, hard snap zoom-out at 05.0s to 35mm wide frame.\\nTimecode: 0.0s-4.5s: Intense facial reflection, breath vapor in cold air. 4.5s-5.0s: 0.5s instant snap weapon transformation. 5.0s-10.0s: Wide frame reveals entire army freezing in fog, eyes glowing red cliffhanger.`;\n\nreturn {\n  json: {\n    projectId: 'VR-' + Date.now(),\n    title: title,\n    shots: [\n      { shotNumber: 1, duration: 10, prompt: shot1 },\n      { shotNumber: 2, duration: 10, prompt: shot2 },\n      { shotNumber: 3, duration: 10, prompt: shot3 }\n    ],\n    totalDuration: 30,\n    model: 'seedance-2.5',\n    aspectRatio: '16:9'\n  }\n};"
+      },
+      "name": "Seedance 2.5 Prompt Engine",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [320, 300]
+    },
+    {
+      "parameters": {
+        "url": "http://localhost:8000/api/media/render-shots",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json) }}",
+        "options": {}
+      },
+      "name": "Send to Media Engine",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [540, 300]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ status: 'queued', data: $json }) }}",
+        "options": {}
+      },
+      "name": "Webhook Response",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [760, 300]
+    }
+  ],
+  "connections": {
+    "Webhook Trigger": {
+      "main": [[{ "node": "Seedance 2.5 Prompt Engine", "type": "main", "index": 0 }]]
+    },
+    "Seedance 2.5 Prompt Engine": {
+      "main": [[{ "node": "Send to Media Engine", "type": "main", "index": 0 }]]
+    },
+    "Send to Media Engine": {
+      "main": [[{ "node": "Webhook Response", "type": "main", "index": 0 }]]
+    }
+  }
+}

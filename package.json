@@ -1,0 +1,22 @@
+﻿{
+  "name": "giant-automation-library",
+  "version": "1.0.0",
+  "description": "Voyagerroc Automation - Production-grade n8n Workflows and Automation Templates",
+  "main": "index.js",
+  "scripts": {
+    "validate": "node scripts/validate-workflows.js",
+    "sync": "node scripts/sync-workflows.js"
+  },
+  "keywords": [
+    "n8n",
+    "workflows",
+    "automation",
+    "higgsfield",
+    "seedance",
+    "youtube-shorts",
+    "ai-agents",
+    "voyagerroc"
+  ],
+  "author": "Voyagerroc Automation",
+  "license": "MIT"
+}

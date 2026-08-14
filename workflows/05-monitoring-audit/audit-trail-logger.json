@@ -1,0 +1,46 @@
+﻿{
+  "name": "Open-LLM-Audit-Trail Execution & Error Logger",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "log-audit-trail",
+        "options": {}
+      },
+      "name": "Audit Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [100, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "const payload = $input.item.json.body || $input.item.json;\nreturn {\n  json: {\n    timestamp: new Date().toISOString(),\n    source: payload.source || 'n8n-workflow',\n    action: payload.action || 'video_generation',\n    status: payload.status || 'SUCCESS',\n    executionTimeMs: payload.executionTimeMs || 120,\n    tokensUsed: payload.tokensUsed || 0,\n    metadata: payload.metadata || {}\n  }\n};"
+      },
+      "name": "Structure Audit Event",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [320, 300]
+    },
+    {
+      "parameters": {
+        "url": "http://localhost:8000/api/audit/log",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json) }}",
+        "options": {}
+      },
+      "name": "Save to Audit Trail DB",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [540, 300]
+    }
+  ],
+  "connections": {
+    "Audit Webhook": {
+      "main": [[{ "node": "Structure Audit Event", "type": "main", "index": 0 }]]
+    },
+    "Structure Audit Event": {
+      "main": [[{ "node": "Save to Audit Trail DB", "type": "main", "index": 0 }]]
+    }
+  }
+}
