@@ -1,0 +1,310 @@
+﻿{
+  "id": "xSQhdn0CELBz3Fwh",
+  "meta": {
+    "instanceId": "d3c17a28b831505b1128b4be827611328e2ecd2d4b635d3c4ca5c08fd677a016",
+    "templateCredsSetupCompleted": true
+  },
+  "name": "Automate UGC Content Creation with N8N and Sora 2 - Santhej Kallada",
+  "tags": [
+    {
+      "id": "o5lUbXtRS653224b",
+      "name": "tutorials",
+      "createdAt": "2025-10-29T07:23:26.446Z",
+      "updatedAt": "2025-10-29T07:23:26.446Z"
+    }
+  ],
+  "nodes": [
+    {
+      "id": "38d1b4e7-9d7a-4135-9ea8-990f8dc7a07a",
+      "name": "form_trigger",
+      "type": "n8n-nodes-base.formTrigger",
+      "position": [400, -1232],
+      "webhookId": "5b969756-591f-4d99-b40c-d8711b047689",
+      "parameters": {
+        "options": {},
+        "formTitle": "eCommerce Product Video Generator",
+        "formFields": {
+          "values": [
+            {
+              "fieldType": "file",
+              "fieldLabel": "Product",
+              "multipleFiles": false,
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Product Name",
+              "placeholder": "AG1",
+              "requiredField": true
+            }
+          ]
+        }
+      },
+      "typeVersion": 2.3
+    },
+    {
+      "id": "15bc2819-ed85-4c89-916a-892dd2cee5e9",
+      "name": "convert_product_to_image",
+      "type": "n8n-nodes-base.convertToFile",
+      "position": [848, -1232],
+      "parameters": {
+        "options": {},
+        "operation": "toBinary",
+        "sourceProperty": "data"
+      },
+      "typeVersion": 1.1
+    },
+    {
+      "id": "4d1963b2-3b9c-450d-bb73-2afd606025b6",
+      "name": "check_status",
+      "type": "n8n-nodes-base.if",
+      "position": [1120, -176],
+      "parameters": {
+        "options": {},
+        "conditions": {
+          "options": {
+            "version": 2,
+            "leftValue": "",
+            "caseSensitive": true,
+            "typeValidation": "strict"
+          },
+          "combinator": "and",
+          "conditions": [
+            {
+              "id": "6ce95513-f1dd-4105-ab55-de5d073cb0c3",
+              "operator": {
+                "name": "filter.operator.equals",
+                "type": "string",
+                "operation": "equals"
+              },
+              "leftValue": "={{ $json.status }}",
+              "rightValue": "completed"
+            }
+          ]
+        }
+      },
+      "typeVersion": 2.2
+    },
+    {
+      "id": "9231b7bc-66e4-4ed8-b653-b65a1a2121f6",
+      "name": "delay",
+      "type": "n8n-nodes-base.wait",
+      "position": [672, -176],
+      "webhookId": "30a9268e-34cc-477e-b843-5e2fb0f76930",
+      "parameters": {
+        "amount": 15
+      },
+      "typeVersion": 1.1
+    },
+    {
+      "id": "81919ddb-9e1d-42cc-a478-9a9d7589a579",
+      "name": "set_frame_result",
+      "type": "n8n-nodes-base.set",
+      "position": [736, -544],
+      "parameters": {
+        "options": {},
+        "assignments": {
+          "assignments": [
+            {
+              "id": "524da01b-f8b9-4c2c-9e28-319455903e4d",
+              "name": "=result",
+              "type": "string",
+              "value": "={{ $json.candidates[0].content.parts.filter(item => item.inlineData).first().inlineData.data }}"
+            }
+          ]
+        }
+      },
+      "typeVersion": 3.4
+    },
+    {
+      "id": "3c858488-bd4a-42a3-b253-ddeb777f9056",
+      "name": "upload_video",
+      "type": "n8n-nodes-base.googleDrive",
+      "position": [1648, -192],
+      "parameters": {
+        "name": "=UGC Video #{{ $runIndex + 1 }}",
+        "driveId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "My Drive"
+        },
+        "options": {},
+        "folderId": {
+          "__rl": true,
+          "mode": "url",
+          "value": "https://drive.google.com/drive/u/0/folders/1p67IRqOzntCDTHKIUci5oqlvTrTx0muj"
+        }
+      },
+      "typeVersion": 3
+    },
+    {
+      "id": "57748cef-a1e7-44ae-b95c-53d43728e942",
+      "name": "generate_ad_prompts",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [512, -848],
+      "parameters": {
+        "url": "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-pro:generateContent",
+        "method": "POST",
+        "options": {},
+        "jsonBody": "={\n  \"contents\": [{\n    \"parts\": [\n      { \"text\": {{ JSON.stringify($json.prompt) }} },\n      {\n        \"inline_data\": {\n          \"mime_type\": \"image/png\",\n          \"data\": \"{{ $node['Convert To Base 64'].json.data }}\"\n        }\n      }\n    ]\n  }]\n}",
+        "sendBody": true,
+        "specifyBody": "json",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth"
+      },
+      "retryOnFail": true,
+      "typeVersion": 4.2,
+      "waitBetweenTries": 5000
+    },
+    {
+      "id": "7b39f207-f1c5-4bb1-97b2-a3d62dac47f5",
+      "name": "Convert To Base 64",
+      "type": "n8n-nodes-base.extractFromFile",
+      "position": [624, -1232],
+      "parameters": {
+        "options": {},
+        "operation": "binaryToPropery",
+        "binaryPropertyName": "Product"
+      },
+      "typeVersion": 1
+    },
+    {
+      "id": "6ec21e78-3cf0-42c4-9953-18944d5127f2",
+      "name": "Generate Ideal Persona",
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "position": [1072, -1232],
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "chatgpt-4o-latest",
+          "cachedResultName": "CHATGPT-4O-LATEST"
+        },
+        "options": {},
+        "resource": "image",
+        "inputType": "base64",
+        "operation": "analyze"
+      },
+      "typeVersion": 1.8
+    },
+    {
+      "id": "3f83b87d-23b5-4cf5-9c6b-ae8281e491db",
+      "name": "Persona Prompt Setup",
+      "type": "n8n-nodes-base.set",
+      "position": [1296, -1232],
+      "parameters": {
+        "options": {},
+        "assignments": {
+          "assignments": [
+            {
+              "id": "796c02ea-66be-484c-a333-be4fffbe17db",
+              "name": "prompt",
+              "type": "string",
+              "value": "={{ $json.content }}"
+            }
+          ]
+        }
+      },
+      "typeVersion": 3.4
+    },
+    {
+      "id": "313fb506-526d-4be8-9412-2cce97203d75",
+      "name": "Download Video",
+      "type": "n8n-nodes-base.httpRequest",
+      "onError": "continueRegularOutput",
+      "position": [1440, -192],
+      "parameters": {
+        "url": "=https://api.openai.com/v1/videos/{{ $json.id }}/content",
+        "options": {},
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "openAiApi"
+      },
+      "retryOnFail": true,
+      "typeVersion": 4.2,
+      "waitBetweenTries": 5000
+    },
+    {
+      "id": "bc9b0109-7136-4cc2-bbb0-ac22a683b477",
+      "name": "Generate Video With SORA",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [448, -176],
+      "parameters": {
+        "url": "https://api.openai.com/v1/videos",
+        "method": "POST",
+        "options": {},
+        "sendBody": true,
+        "contentType": "multipart-form-data",
+        "authentication": "predefinedCredentialType",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "prompt",
+              "value": "={{ $node['Create 3 Videos'].json.prompt }}"
+            },
+            {
+              "name": "model",
+              "value": "sora-2"
+            },
+            {
+              "name": "seconds",
+              "value": "12"
+            },
+            {
+              "name": "size",
+              "value": "720x1280"
+            },
+            {
+              "name": "input_reference",
+              "parameterType": "formBinaryData",
+              "inputDataFieldName": "data"
+            }
+          ]
+        },
+        "nodeCredentialType": "openAiApi"
+      },
+      "retryOnFail": true,
+      "typeVersion": 4.2,
+      "waitBetweenTries": 5000
+    },
+    {
+      "id": "11a9cc36-6cfd-482c-acc0-8f4d8ffe385a",
+      "name": "Get Video Creation Status",
+      "type": "n8n-nodes-base.httpRequest",
+      "onError": "continueRegularOutput",
+      "position": [896, -176],
+      "parameters": {
+        "url": "=https://api.openai.com/v1/videos/{{ $json.id }}",
+        "options": {},
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "openAiApi"
+      },
+      "retryOnFail": true,
+      "typeVersion": 4.2
+    }
+  ],
+  "connections": {
+    "delay": {
+      "main": [[{ "node": "Get Video Creation Status", "type": "main", "index": 0 }]]
+    },
+    "check_status": {
+      "main": [
+        [{ "node": "Download Video", "type": "main", "index": 0 }],
+        [{ "node": "delay", "type": "main", "index": 0 }]
+      ]
+    },
+    "form_trigger": {
+      "main": [[{ "node": "Convert To Base 64", "type": "main", "index": 0 }]]
+    },
+    "Download Video": {
+      "main": [[{ "node": "upload_video", "type": "main", "index": 0 }]]
+    },
+    "Convert To Base 64": {
+      "main": [[{ "node": "convert_product_to_image", "type": "main", "index": 0 }]]
+    },
+    "Generate Video With SORA": {
+      "main": [[{ "node": "delay", "type": "main", "index": 0 }]]
+    },
+    "Get Video Creation Status": {
+      "main": [[{ "node": "check_status", "type": "main", "index": 0 }]]
+    }
+  }
+}
