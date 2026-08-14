@@ -1,4 +1,4 @@
-﻿# âš¡ Giant Automation Library
+# âš¡ Giant Automation Library
 
 **Giant Automation Library**, [Voyagerroc-Automation](https://github.com/Voyagerroc-Automation) organizasyonunun Ã¼retim seviyesindeki **n8n iÅŸ akÄ±ÅŸlarÄ±nÄ± (workflows)**, otonom tetikleyicilerini ve AI iÅŸlem ÅŸablonlarÄ±nÄ± barÄ±ndÄ±ran merkezi kÃ¼tÃ¼phanedir.
 
