@@ -1,4 +1,5 @@
 {
+  "id": "63KgkSFVXycB8ptG",
   "name": "Higgsfield Seedance 2.5 - Enhanced 3-Shot (30s) Cinematic & Audio Engine",
   "nodes": [
     {
@@ -11,7 +12,10 @@
       "name": "Webhook Trigger",
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 1,
-      "position": [100, 300]
+      "position": [
+        100,
+        300
+      ]
     },
     {
       "parameters": {
@@ -20,11 +24,14 @@
       "name": "Seedance 2.5 + VEO3 Unified Prompt Engine",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [320, 300]
+      "position": [
+        320,
+        300
+      ]
     },
     {
       "parameters": {
-        "url": "http://localhost:8000/api/media/render-shots",
+        "url": "http://automation-os:8000/api/v1/media/render-shots",
         "sendBody": true,
         "specifyBody": "json",
         "jsonBody": "={{ JSON.stringify($json) }}",
@@ -33,7 +40,10 @@
       "name": "Send to Media Engine",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.1,
-      "position": [540, 300]
+      "position": [
+        540,
+        300
+      ]
     },
     {
       "parameters": {
@@ -44,18 +54,45 @@
       "name": "Webhook Response",
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1,
-      "position": [760, 300]
+      "position": [
+        760,
+        300
+      ]
     }
   ],
   "connections": {
     "Webhook Trigger": {
-      "main": [[{ "node": "Seedance 2.5 + VEO3 Unified Prompt Engine", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "Seedance 2.5 + VEO3 Unified Prompt Engine",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Seedance 2.5 + VEO3 Unified Prompt Engine": {
-      "main": [[{ "node": "Send to Media Engine", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "Send to Media Engine",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Send to Media Engine": {
-      "main": [[{ "node": "Webhook Response", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "Webhook Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     }
   }
 }
