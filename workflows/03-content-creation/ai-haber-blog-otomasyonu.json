@@ -165,7 +165,7 @@
         "genericAuthType": "httpQueryAuth",
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ contents: [{ parts: [{ text: `Asagidaki yapay zeka haberinden Turkce bir blog yazisi uret.\\n\\nKURALLAR:\\n- 250-400 kelime, akici ve ozgun bir dille YENIDEN anlat (ceviri degil, derleme).\\n- baslik: en fazla 60 karakter, merak uyandiran ama clickbait olmayan, buyuk harf yagmuru yok.\\n- Ilk paragraf haberi 2 cumlede ozetlesin (arama sonuclarinda gorunecek kisim).\\n- En az bir <h3> ara baslik kullan.\\n- Haberin neden onemli oldugunu bir paragrafta yorumla.\\n- Uydurma bilgi ekleme; yalnizca verilen ozetteki bilgiyi kullan.\\n- html alani yalnizca <p>, <h3>, <ul>, <li>, <strong> etiketleri icersin.\\n\\nHABER BASLIGI: ${$json.baslik}\\nKAYNAK: ${$json.kaynak}\\nOZET: ${$json.ozet}` }] }], generationConfig: { temperature: 0.4, maxOutputTokens: 3000, responseMimeType: 'application/json', responseSchema: { type: 'OBJECT', properties: { baslik: { type: 'STRING' }, html: { type: 'STRING' } }, required: ['baslik', 'html'] } } }) }}",
+        "jsonBody": "={{ JSON.stringify({ contents: [{ parts: [{ text: `Asagidaki yapay zeka haberinden Turkce bir blog yazisi uret.\\n\\nKURALLAR:\\n- 250-400 kelime, akici ve ozgun bir dille YENIDEN anlat (ceviri degil, derleme).\\n- baslik: en fazla 60 karakter, merak uyandiran ama clickbait olmayan, buyuk harf yagmuru yok.\\n- Ilk paragraf haberi 2 cumlede ozetlesin (arama sonuclarinda gorunecek kisim).\\n- En az bir <h3> ara baslik kullan.\\n- Haberin neden onemli oldugunu bir paragrafta yorumla.\\n- Uydurma bilgi ekleme; yalnizca verilen ozetteki bilgiyi kullan.\\n- TIPOGRAFI: paragraflar kisa olsun (2-4 cumle), her paragraf tek fikir anlatsin.\\n- Onemli terim ve urun adlarini <strong> ile vurgula (yazi basina 3-5 vurgu, fazlasi degil).\\n- Markdown KULLANMA (##, ** yasak); duz tirnak isareti kullan; UPPERCASE kelime yazma.\\n- html alani yalnizca <p>, <h3>, <ul>, <li>, <strong> etiketleri icersin.\\n\\nHABER BASLIGI: ${$json.baslik}\\nKAYNAK: ${$json.kaynak}\\nOZET: ${$json.ozet}` }] }], generationConfig: { temperature: 0.4, maxOutputTokens: 3000, responseMimeType: 'application/json', responseSchema: { type: 'OBJECT', properties: { baslik: { type: 'STRING' }, html: { type: 'STRING' } }, required: ['baslik', 'html'] } } }) }}",
         "options": {
           "timeout": 60000
         }
@@ -214,7 +214,7 @@
         "genericAuthType": "httpQueryAuth",
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ contents: [{ parts: [{ text: `Asagidaki yapay zeka haberinden Turkce bir blog yazisi uret.\\n\\nKURALLAR:\\n- 250-400 kelime, akici ve ozgun bir dille YENIDEN anlat (ceviri degil, derleme).\\n- baslik: en fazla 60 karakter, merak uyandiran ama clickbait olmayan, buyuk harf yagmuru yok.\\n- Ilk paragraf haberi 2 cumlede ozetlesin (arama sonuclarinda gorunecek kisim).\\n- En az bir <h3> ara baslik kullan.\\n- Haberin neden onemli oldugunu bir paragrafta yorumla.\\n- Uydurma bilgi ekleme; yalnizca verilen ozetteki bilgiyi kullan.\\n- html alani yalnizca <p>, <h3>, <ul>, <li>, <strong> etiketleri icersin.\\n\\nHABER BASLIGI: ${$('Tek Tek Isle').first().json.baslik}\\nKAYNAK: ${$('Tek Tek Isle').first().json.kaynak}\\nOZET: ${$('Tek Tek Isle').first().json.ozet}` }] }], generationConfig: { temperature: 0.4, maxOutputTokens: 3000, responseMimeType: 'application/json', responseSchema: { type: 'OBJECT', properties: { baslik: { type: 'STRING' }, html: { type: 'STRING' } }, required: ['baslik', 'html'] } } }) }}",
+        "jsonBody": "={{ JSON.stringify({ contents: [{ parts: [{ text: `Asagidaki yapay zeka haberinden Turkce bir blog yazisi uret.\\n\\nKURALLAR:\\n- 250-400 kelime, akici ve ozgun bir dille YENIDEN anlat (ceviri degil, derleme).\\n- baslik: en fazla 60 karakter, merak uyandiran ama clickbait olmayan, buyuk harf yagmuru yok.\\n- Ilk paragraf haberi 2 cumlede ozetlesin (arama sonuclarinda gorunecek kisim).\\n- En az bir <h3> ara baslik kullan.\\n- Haberin neden onemli oldugunu bir paragrafta yorumla.\\n- Uydurma bilgi ekleme; yalnizca verilen ozetteki bilgiyi kullan.\\n- TIPOGRAFI: paragraflar kisa olsun (2-4 cumle), her paragraf tek fikir anlatsin.\\n- Onemli terim ve urun adlarini <strong> ile vurgula (yazi basina 3-5 vurgu, fazlasi degil).\\n- Markdown KULLANMA (##, ** yasak); duz tirnak isareti kullan; UPPERCASE kelime yazma.\\n- html alani yalnizca <p>, <h3>, <ul>, <li>, <strong> etiketleri icersin.\\n\\nHABER BASLIGI: ${$('Tek Tek Isle').first().json.baslik}\\nKAYNAK: ${$('Tek Tek Isle').first().json.kaynak}\\nOZET: ${$('Tek Tek Isle').first().json.ozet}` }] }], generationConfig: { temperature: 0.4, maxOutputTokens: 3000, responseMimeType: 'application/json', responseSchema: { type: 'OBJECT', properties: { baslik: { type: 'STRING' }, html: { type: 'STRING' } }, required: ['baslik', 'html'] } } }) }}",
         "options": {
           "timeout": 60000
         }
@@ -261,6 +261,58 @@
       "notes": "true dali = yazi kalitesiz/uretimsiz, dogrudan kayda gecilir (yayin yok). false dali = mukerrer kontrolune devam."
     },
     {
+      "id": "n-makale",
+      "name": "Makale Sayfasi",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1890, 340],
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $('Tek Tek Isle').first().json.link }}",
+        "options": {
+          "timeout": 20000,
+          "response": {
+            "response": { "responseFormat": "text", "outputPropertyName": "data" }
+          }
+        }
+      },
+      "retryOnFail": false,
+      "onError": "continueRegularOutput",
+      "notes": "Haberin kendi sayfasindan og:image cekmek icin. Basarisiz olursa akis durmaz; 'Gorsel ve Tipografi' tematik illustrasyon yedegine duser."
+    },
+    {
+      "id": "n-gorsel",
+      "name": "Gorsel ve Tipografi",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [2060, 340],
+      "parameters": {
+        "jsCode": "// SUNUM KILIDI hazirligi: konuyla uyumlu bir kapak gorseli bul ve\n// tipografiyi standartlastir. Gorsel oncelik sirasi:\n//  1. Haberin kendi og:image/twitter:image'i (konuyla birebir uyumlu).\n//  2. Yedek: haber basligindan uretilen tematik illustrasyon (Pollinations,\n//     anahtar'dan turetilen sabit seed -> ayni haber hep ayni gorseli alir).\n// Tipografi: markdown kalintilari temizlenir, tum etiketlere satir araligi\n// ve bosluk veren inline stiller basilir (Blogger temasindan bagimsiz\n// tutarli gorunum). Kilit kosullari saglanmazsa atla=true - yazi YAYINLANMAZ.\nconst hazirlanan = $('Yaziyi Hazirla').first().json;\nconst haber = $('Tek Tek Isle').first().json;\nconst sayfa = $input.first().json || {};\nconst sayfaHtml = typeof sayfa.data === 'string' ? sayfa.data : '';\n\nlet gorselUrl = '';\nlet gorselKaynagi = '';\nconst m = sayfaHtml.match(/<meta[^>]+(?:property|name)=[\"'](?:og:image|twitter:image(?::src)?)[\"'][^>]+content=[\"']([^\"']+)[\"']/i)\n       || sayfaHtml.match(/<meta[^>]+content=[\"']([^\"']+)[\"'][^>]+(?:property|name)=[\"'](?:og:image|twitter:image(?::src)?)[\"']/i);\nif (m && /^https?:\\/\\//i.test(m[1])) {\n  gorselUrl = m[1].replace(/&amp;/g, '&');\n  gorselKaynagi = 'haberin kendi gorseli';\n}\nif (!gorselUrl) {\n  let seed = 0;\n  for (const c of String(hazirlanan.anahtar || haber.baslik || 'ai')) seed = (seed * 31 + c.charCodeAt(0)) % 100000;\n  const prompt = 'modern minimal editorial tech illustration, artificial intelligence news, no text, ' + haber.baslik;\n  gorselUrl = 'https://image.pollinations.ai/prompt/' + encodeURIComponent(prompt).slice(0, 500) + '?width=1200&height=675&nologo=true&seed=' + seed;\n  gorselKaynagi = 'konuya ozel tematik illustrasyon';\n}\n\nlet govde = String((hazirlanan.postBody && hazirlanan.postBody.content) || '');\n// Markdown kalintilarini temizle (Gemini'ye yasakli ama kacak olabiliyor).\ngovde = govde.replace(/\\*\\*(.+?)\\*\\*/g, '<strong>$1</strong>').replace(/^#{1,6}\\s*/gm, '');\nconst stil = {\n  p:  'margin:0 0 16px;line-height:1.75;font-size:17px;',\n  h3: 'margin:28px 0 12px;line-height:1.35;font-size:21px;font-weight:700;',\n  ul: 'margin:0 0 16px 22px;padding:0;line-height:1.75;font-size:17px;',\n  li: 'margin:0 0 6px;'\n};\nfor (const t of Object.keys(stil)) {\n  govde = govde.replace(new RegExp('<' + t + '(?![a-z])[^>]*>', 'gi'), '<' + t + ' style=\"' + stil[t] + '\">');\n}\n\n// KILIT: gorsel URL'si ve asgari tipografik yapi (>=3 paragraf + >=1 ara\n// baslik) yoksa yayin yok. Kalite, gunluk kotadan onceliklidir.\nconst pSayisi = (govde.match(/<p[\\s>]/gi) || []).length;\nconst h3Var = /<h3[\\s>]/i.test(govde);\nlet atla = false;\nlet atlamaNedeni = '';\nif (!gorselUrl) { atla = true; atlamaNedeni = 'Sunum kilidi: konuyla uyumlu gorsel bulunamadi'; }\nelse if (pSayisi < 3 || !h3Var) { atla = true; atlamaNedeni = 'Sunum kilidi: tipografik yapi yetersiz (' + pSayisi + ' paragraf, ara baslik: ' + (h3Var ? 'var' : 'yok') + ')'; }\n\nconst baslikAlt = String(hazirlanan.postBody ? hazirlanan.postBody.title : haber.baslik).replace(/\"/g, '&quot;');\nconst kapak = '<figure style=\"margin:0 0 20px;\"><img src=\"' + gorselUrl + '\" alt=\"' + baslikAlt + '\" style=\"width:100%;height:auto;border-radius:10px;display:block;\" loading=\"lazy\"/><figcaption style=\"font-size:13px;color:#777;margin-top:6px;\">' + haber.kaynak + ' | ' + gorselKaynagi + '</figcaption></figure>';\nconst icerik = '<div style=\"font-family:Georgia,\\'Times New Roman\\',serif;max-width:760px;\">' + kapak + govde + '</div>';\n\nconst postBody = atla ? null : Object.assign({}, hazirlanan.postBody, { content: icerik });\nreturn [{ json: Object.assign({}, hazirlanan, {\n  atla: atla,\n  atlamaNedeni: atlamaNedeni,\n  gorselUrl: gorselUrl,\n  gorselKaynagi: gorselKaynagi,\n  postBody: postBody\n}) }];"
+      }
+    },
+    {
+      "id": "n-sunumkilit",
+      "name": "Sunum Kilidi",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [2230, 340],
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "strict", "version": 2 },
+          "combinator": "and",
+          "conditions": [
+            {
+              "id": "c-sunum",
+              "leftValue": "={{ $json.atla }}",
+              "rightValue": "",
+              "operator": { "type": "boolean", "operation": "true", "singleValue": true }
+            }
+          ]
+        }
+      },
+      "notes": "true = gorsel yok veya tipografi standardi saglanmadi -> yayin YOK, kayda gec (parmak izi yazilmaz, yarin yeniden denenir). false = mukerrer kontrolune devam."
+    },
+    {
       "id": "n-ara",
       "name": "Bloggerda Ara",
       "type": "n8n-nodes-base.httpRequest",
@@ -291,7 +343,7 @@
       "typeVersion": 2,
       "position": [2220, 160],
       "parameters": {
-        "jsCode": "// Blogger aramasinin sonucunu degerlendir: birebir ayni baslikli yazi\n// varsa mukerrer say. Arama hata dondurduyse (veya beklenmedik semada)\n// fail-open: yayina devam - mukerrer korumasi 'en iyi caba' katmanidir,\n// yayin akisini asla kilitlemez.\nconst hazirlanan = $('Yaziyi Hazirla').first().json;\nconst arama = $input.first().json;\nlet mukerrer = false;\ntry {\n  const bulunanlar = Array.isArray(arama.items) ? arama.items : [];\n  mukerrer = bulunanlar.some(p => (p.title || '').trim() === hazirlanan.postBody.title.trim());\n} catch (e) {\n  mukerrer = false;\n}\nreturn [{ json: Object.assign({}, hazirlanan, { mukerrer: mukerrer }) }];"
+        "jsCode": "// Blogger aramasinin sonucunu degerlendir: birebir ayni baslikli yazi\n// varsa mukerrer say. Arama hata dondurduyse (veya beklenmedik semada)\n// fail-open: yayina devam - mukerrer korumasi 'en iyi caba' katmanidir,\n// yayin akisini asla kilitlemez.\nconst hazirlanan = $('Gorsel ve Tipografi').first().json;\nconst arama = $input.first().json;\nlet mukerrer = false;\ntry {\n  const bulunanlar = Array.isArray(arama.items) ? arama.items : [];\n  mukerrer = bulunanlar.some(p => (p.title || '').trim() === hazirlanan.postBody.title.trim());\n} catch (e) {\n  mukerrer = false;\n}\nreturn [{ json: Object.assign({}, hazirlanan, { mukerrer: mukerrer }) }];"
       }
     },
     {
@@ -350,7 +402,7 @@
       "typeVersion": 2,
       "position": [2880, 60],
       "parameters": {
-        "jsCode": "// Uc yoldan biriyle gelinir: (1) Blogger yayin yaniti, (2) mukerrer\n// tespiti, (3) kalite atlamasi. Yayinlanan VEYA mukerrer haberin parmak\n// izi 7 gunluk tekrar filtresine yazilir (yarin yeniden secilmesin);\n// kalite atlamasinda YAZILMAZ (Gemini duzelince yeniden denensin).\nconst s = $getWorkflowStaticData('global');\nconst y = $input.first().json;\nconst hazirlanan = $('Yaziyi Hazirla').first().json;\nconst yayinlandi = Boolean(y && (y.id || (y.kind === 'blogger#post' && y.url)));\nconst mukerrer = y.mukerrer === true && !yayinlandi;\nconst atlandi = y.atla === true && !yayinlandi && !mukerrer;\nif ((yayinlandi || mukerrer) && hazirlanan.anahtar) {\n  if (!s.yayinlananlar) s.yayinlananlar = {};\n  s.yayinlananlar[hazirlanan.anahtar] = Date.now();\n}\ns.basladi = Date.now();\nreturn [{ json: {\n  basarili: yayinlandi,\n  mukerrer: mukerrer,\n  atlandi: atlandi,\n  atlamaNedeni: hazirlanan.atlamaNedeni || '',\n  anahtar: hazirlanan.anahtar,\n  yayinBasligi: hazirlanan.baslikTaslak\n} }];"
+        "jsCode": "// Uc yoldan biriyle gelinir: (1) Blogger yayin yaniti, (2) mukerrer\n// tespiti, (3) kalite atlamasi. Yayinlanan VEYA mukerrer haberin parmak\n// izi 7 gunluk tekrar filtresine yazilir (yarin yeniden secilmesin);\n// kalite atlamasinda YAZILMAZ (Gemini duzelince yeniden denensin).\nconst s = $getWorkflowStaticData('global');\nconst y = $input.first().json;\nconst hazirlanan = $('Yaziyi Hazirla').first().json;\nconst yayinlandi = Boolean(y && (y.id || (y.kind === 'blogger#post' && y.url)));\nconst mukerrer = y.mukerrer === true && !yayinlandi;\nconst atlandi = y.atla === true && !yayinlandi && !mukerrer;\nif ((yayinlandi || mukerrer) && hazirlanan.anahtar) {\n  if (!s.yayinlananlar) s.yayinlananlar = {};\n  s.yayinlananlar[hazirlanan.anahtar] = Date.now();\n}\ns.basladi = Date.now();\nreturn [{ json: {\n  basarili: yayinlandi,\n  mukerrer: mukerrer,\n  atlandi: atlandi,\n  atlamaNedeni: y.atlamaNedeni || hazirlanan.atlamaNedeni || '',\n  anahtar: hazirlanan.anahtar,\n  yayinBasligi: hazirlanan.baslikTaslak\n} }];"
       }
     },
     {
@@ -406,6 +458,14 @@
     "Yedek Model (Lite)": { "main": [[{ "node": "Yaziyi Hazirla", "type": "main", "index": 0 }]] },
     "Yaziyi Hazirla": { "main": [[{ "node": "Atlansin mi?", "type": "main", "index": 0 }]] },
     "Atlansin mi?": {
+      "main": [
+        [{ "node": "Basariyi Kaydet", "type": "main", "index": 0 }],
+        [{ "node": "Makale Sayfasi", "type": "main", "index": 0 }]
+      ]
+    },
+    "Makale Sayfasi": { "main": [[{ "node": "Gorsel ve Tipografi", "type": "main", "index": 0 }]] },
+    "Gorsel ve Tipografi": { "main": [[{ "node": "Sunum Kilidi", "type": "main", "index": 0 }]] },
+    "Sunum Kilidi": {
       "main": [
         [{ "node": "Basariyi Kaydet", "type": "main", "index": 0 }],
         [{ "node": "Bloggerda Ara", "type": "main", "index": 0 }]
