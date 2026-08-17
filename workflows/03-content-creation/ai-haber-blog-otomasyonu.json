@@ -1,0 +1,430 @@
+{
+  "id": "aihbrblg20260816tr",
+  "name": "AI Haber Derlemesi - Gunluk 10 Blogger Yazisi",
+  "nodes": [
+    {
+      "id": "n-trigger",
+      "name": "Her Gun 09:00",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [-380, -80],
+      "parameters": {
+        "rule": {
+          "interval": [
+            { "field": "days", "triggerAtHour": 9, "triggerAtMinute": 0 }
+          ]
+        }
+      }
+    },
+    {
+      "id": "n-webhook",
+      "name": "Elle Baslat (Webhook)",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [-380, 120],
+      "webhookId": "9c2f4a71-6e83-4b5d-a1f0-3d7e8c5b2a94",
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "ai-haber-baslat",
+        "responseMode": "onReceived",
+        "options": {}
+      },
+      "notes": "Docker acilisinda BLOG-BEKCISI.ps1 buraya POST atar. n8n yalnizca 127.0.0.1'e bagli oldugu icin webhook disariya kapali. Bekci 08:30-09:35 arasinda POST atmaz (zamanlayiciyla yaris onlenir)."
+    },
+    {
+      "id": "n-ayarlar",
+      "name": "Ayarlar",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [-160, 0],
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "a-blogid",
+              "name": "blogId",
+              "type": "string",
+              "value": "4354035407776294026"
+            },
+            {
+              "id": "a-gunluk",
+              "name": "gunlukYaziSayisi",
+              "type": "number",
+              "value": 10
+            },
+            {
+              "id": "a-saat",
+              "name": "kacSaatGeriye",
+              "type": "number",
+              "value": 28
+            },
+            {
+              "id": "a-tempo",
+              "name": "yazilarArasiSaniye",
+              "type": "number",
+              "value": 45
+            }
+          ]
+        }
+      },
+      "notes": "blogId: Blogger panelinde blogunuzun adresindeki sayisal ID. yazilarArasiSaniye: yazilar arasi bekleme (45=hizli seri, 1800=gune yayilmis dogal tempo)."
+    },
+    {
+      "id": "n-kilit",
+      "name": "Gunluk Kilit",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [40, 0],
+      "parameters": {
+        "jsCode": "// Ayni gunun IKINCI kez yayinlanmasini onler. ONEMLI SINIR: n8n static\n// data'yi ancak kosu BITINCE veritabanina yazar; bu kilit ART ARDA gelen\n// tetiklemelere karsi korur, ES ZAMANLI iki kosuya karsi korumaz. Es\n// zamanlilik iki yerde onlenir: (1) bekci 08:30-09:35 sessiz penceresinde\n// zamanlayiciyla cakismaz, (2) 'Bloggerda Ara' mukerrer kontrolu ayni\n// basligin ikinci kez basilmasini Blogger'in kendi kaydiyla keser.\nconst s = $getWorkflowStaticData('global');\nconst bugun = new Date().toLocaleDateString('en-CA', { timeZone: 'Europe/Istanbul' });\nconst simdi = Date.now();\nlet devam = true;\nlet neden = 'yayina devam';\nif (s.sonYayinTarihi === bugun) {\n  devam = false;\n  neden = 'bugun zaten yayinlandi (' + bugun + ')';\n} else if (s.basladi && (simdi - s.basladi) < 2 * 3600 * 1000) {\n  devam = false;\n  neden = 'yakin zamanda baslamis bir kosu var';\n}\nif (devam) { s.basladi = simdi; }\nreturn [{ json: Object.assign({}, $('Ayarlar').first().json, { devam: devam, neden: neden }) }];"
+      }
+    },
+    {
+      "id": "n-devammi",
+      "name": "Devam mi?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [240, 0],
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "strict", "version": 2 },
+          "combinator": "and",
+          "conditions": [
+            {
+              "id": "c-devam",
+              "leftValue": "={{ $json.devam }}",
+              "rightValue": "",
+              "operator": { "type": "boolean", "operation": "true", "singleValue": true }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "n-atlandi",
+      "name": "Bugun Atlandi",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [460, 160],
+      "parameters": {},
+      "notes": "Kilit devrede: neden alani calisma gecmisinde gorunur."
+    },
+    {
+      "id": "n-kaynaklar",
+      "name": "Haber Kaynaklari",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [460, -80],
+      "parameters": {
+        "jsCode": "// AI haber RSS kaynaklari. Biri okunamazsa akis durmaz (RSS dugumu\n// continueOnFail ile calisiyor); yeni kaynak eklemek icin satir ekleyin.\nconst kaynaklar = [\n  { kaynak: 'TechCrunch AI',        url: 'https://techcrunch.com/category/artificial-intelligence/feed/' },\n  { kaynak: 'The Verge AI',         url: 'https://www.theverge.com/rss/ai-artificial-intelligence/index.xml' },\n  { kaynak: 'VentureBeat AI',       url: 'https://venturebeat.com/category/ai/feed/' },\n  { kaynak: 'Google AI Blog',       url: 'https://blog.google/technology/ai/rss/' },\n  { kaynak: 'OpenAI News',          url: 'https://openai.com/news/rss.xml' },\n  { kaynak: 'Hugging Face Blog',    url: 'https://huggingface.co/blog/feed.xml' },\n  { kaynak: 'MIT Technology Review',url: 'https://www.technologyreview.com/topic/artificial-intelligence/feed' }\n];\nconst ayar = $('Ayarlar').first().json;\nreturn kaynaklar.map(k => ({ json: Object.assign({}, ayar, k) }));"
+      }
+    },
+    {
+      "id": "n-rss",
+      "name": "RSS Oku",
+      "type": "n8n-nodes-base.rssFeedRead",
+      "typeVersion": 1.2,
+      "position": [680, -80],
+      "parameters": {
+        "url": "={{ $json.url }}",
+        "options": {}
+      },
+      "onError": "continueRegularOutput",
+      "notes": "Kaynak basina bir kez calisir. Cikti item'lari girdi alanlarini TASIMAZ; kaynak adi 'Sec ve Siralama'da pairedItem ile geri eslenir."
+    },
+    {
+      "id": "n-sec",
+      "name": "Sec ve Siralama",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [900, -80],
+      "parameters": {
+        "jsCode": "// Uc suzgec + adil dagitim:\n//  1. Zaman: yalnizca son N saatin haberleri.\n//  2. Kosu ici tekrar: normalize baslik anahtariyla ayni haberi iki kez alma.\n//  3. Gunler arasi tekrar: son 7 gunun yayin parmak izleri static data'da\n//     tutulur ve elenir (28 saatlik pencere gunluk kosuyla ortusuyor).\n// Secim tarihe gore degil KAYNAKLAR ARASI DONUSUMLU yapilir; tek kaynagin\n// gunun tamamini kaplamasi engellenir.\n// NOT: RSS Oku girdi alanlarini dusurur; kaynak adi pairedItem uzerinden\n// 'Haber Kaynaklari' item'ina geri eslenerek bulunur (pairedItem dizi,\n// nesne veya sayi olabilir - ucu de ele alinir).\nconst s = $getWorkflowStaticData('global');\nif (!s.yayinlananlar) s.yayinlananlar = {};\nconst yediGunOnce = Date.now() - 7 * 24 * 3600 * 1000;\nfor (const k of Object.keys(s.yayinlananlar)) {\n  if (s.yayinlananlar[k] < yediGunOnce) delete s.yayinlananlar[k];\n}\nconst ayar = $('Ayarlar').first().json;\nconst kaynakItems = $('Haber Kaynaklari').all();\nconst esik = Date.now() - ayar.kacSaatGeriye * 3600 * 1000;\nconst gorulen = new Set();\nconst adaylar = [];\nfor (const item of $input.all()) {\n  const j = item.json;\n  const baslik = (j.title || '').trim();\n  const link = j.link || '';\n  if (!baslik || !link) continue;\n  const tarih = new Date(j.isoDate || j.pubDate || 0).getTime();\n  if (!tarih || tarih < esik) continue;\n  const anahtar = baslik.toLowerCase().replace(/[^a-z0-9ğüşöçı ]/g, '').split(/\\s+/).slice(0, 8).join(' ');\n  if (gorulen.has(anahtar)) continue;\n  if (s.yayinlananlar[anahtar]) continue;\n  gorulen.add(anahtar);\n  let pi = item.pairedItem;\n  if (Array.isArray(pi)) pi = pi[0];\n  const kaynakIdx = (typeof pi === 'number') ? pi : (pi && typeof pi.item === 'number' ? pi.item : null);\n  const kaynakAdi = (kaynakIdx !== null && kaynakItems[kaynakIdx]) ? kaynakItems[kaynakIdx].json.kaynak : 'Kaynak';\n  adaylar.push({\n    baslik,\n    link,\n    tarih,\n    anahtar,\n    ozet: (j.contentSnippet || j.content || '').replace(/<[^>]+>/g, ' ').replace(/\\s+/g, ' ').trim().slice(0, 1200),\n    kaynak: kaynakAdi\n  });\n}\nadaylar.sort((a, b) => b.tarih - a.tarih);\nconst gruplar = new Map();\nfor (const a of adaylar) {\n  if (!gruplar.has(a.kaynak)) gruplar.set(a.kaynak, []);\n  gruplar.get(a.kaynak).push(a);\n}\nconst secilen = [];\nwhile (secilen.length < ayar.gunlukYaziSayisi) {\n  let eklendi = false;\n  for (const kuyruk of gruplar.values()) {\n    if (kuyruk.length > 0 && secilen.length < ayar.gunlukYaziSayisi) {\n      secilen.push(kuyruk.shift());\n      eklendi = true;\n    }\n  }\n  if (!eklendi) break;\n}\nif (secilen.length === 0) {\n  throw new Error('Son ' + ayar.kacSaatGeriye + ' saatte yayinlanmamis yeni haber bulunamadi (7 gunluk tekrar filtresi dahil) - kaynaklari kontrol edin.');\n}\nreturn secilen.map(h => ({ json: h }));"
+      }
+    },
+    {
+      "id": "n-dongu",
+      "name": "Tek Tek Isle",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [1120, -80],
+      "parameters": {
+        "options": {}
+      }
+    },
+    {
+      "id": "n-gemini",
+      "name": "Gemini ile Yazi Uret",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1340, 60],
+      "parameters": {
+        "method": "POST",
+        "url": "https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpQueryAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ contents: [{ parts: [{ text: `Asagidaki yapay zeka haberinden Turkce bir blog yazisi uret.\\n\\nKURALLAR:\\n- 250-400 kelime, akici ve ozgun bir dille YENIDEN anlat (ceviri degil, derleme).\\n- baslik: en fazla 60 karakter, merak uyandiran ama clickbait olmayan, buyuk harf yagmuru yok.\\n- Ilk paragraf haberi 2 cumlede ozetlesin (arama sonuclarinda gorunecek kisim).\\n- En az bir <h3> ara baslik kullan.\\n- Haberin neden onemli oldugunu bir paragrafta yorumla.\\n- Uydurma bilgi ekleme; yalnizca verilen ozetteki bilgiyi kullan.\\n- html alani yalnizca <p>, <h3>, <ul>, <li>, <strong> etiketleri icersin.\\n\\nHABER BASLIGI: ${$json.baslik}\\nKAYNAK: ${$json.kaynak}\\nOZET: ${$json.ozet}` }] }], generationConfig: { temperature: 0.4, maxOutputTokens: 3000, responseMimeType: 'application/json', responseSchema: { type: 'OBJECT', properties: { baslik: { type: 'STRING' }, html: { type: 'STRING' } }, required: ['baslik', 'html'] } } }) }}",
+        "options": {
+          "timeout": 60000
+        }
+      },
+      "credentials": {
+        "httpQueryAuth": { "id": "gmnhbrkey2026081601", "name": "Gemini API Key" }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000,
+      "onError": "continueRegularOutput",
+      "notes": "Credential bagli: 'Gemini API Key'. JSON modu (responseMimeType + responseSchema) acik. 3 deneme sonra hala 503 ise akis 'Yedek Model (Lite)'a duser - 16 Agu kosusunda flash-latest gun boyu asiri yuklu oldugu icin bu yedek katman eklendi."
+    },
+    {
+      "id": "n-yanitvarif",
+      "name": "Gemini Yanit Verdi mi?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [1450, 60],
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "strict", "version": 2 },
+          "combinator": "and",
+          "conditions": [
+            {
+              "id": "c-yanit",
+              "leftValue": "={{ $json.candidates !== undefined }}",
+              "rightValue": "",
+              "operator": { "type": "boolean", "operation": "true", "singleValue": true }
+            }
+          ]
+        }
+      },
+      "notes": "Birincil model yanit uretemedi (503 vb.) ise yedek modele dus."
+    },
+    {
+      "id": "n-geminilite",
+      "name": "Yedek Model (Lite)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1450, 240],
+      "parameters": {
+        "method": "POST",
+        "url": "https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-lite-latest:generateContent",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpQueryAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ contents: [{ parts: [{ text: `Asagidaki yapay zeka haberinden Turkce bir blog yazisi uret.\\n\\nKURALLAR:\\n- 250-400 kelime, akici ve ozgun bir dille YENIDEN anlat (ceviri degil, derleme).\\n- baslik: en fazla 60 karakter, merak uyandiran ama clickbait olmayan, buyuk harf yagmuru yok.\\n- Ilk paragraf haberi 2 cumlede ozetlesin (arama sonuclarinda gorunecek kisim).\\n- En az bir <h3> ara baslik kullan.\\n- Haberin neden onemli oldugunu bir paragrafta yorumla.\\n- Uydurma bilgi ekleme; yalnizca verilen ozetteki bilgiyi kullan.\\n- html alani yalnizca <p>, <h3>, <ul>, <li>, <strong> etiketleri icersin.\\n\\nHABER BASLIGI: ${$('Tek Tek Isle').first().json.baslik}\\nKAYNAK: ${$('Tek Tek Isle').first().json.kaynak}\\nOZET: ${$('Tek Tek Isle').first().json.ozet}` }] }], generationConfig: { temperature: 0.4, maxOutputTokens: 3000, responseMimeType: 'application/json', responseSchema: { type: 'OBJECT', properties: { baslik: { type: 'STRING' }, html: { type: 'STRING' } }, required: ['baslik', 'html'] } } }) }}",
+        "options": {
+          "timeout": 60000
+        }
+      },
+      "credentials": {
+        "httpQueryAuth": { "id": "gmnhbrkey2026081601", "name": "Gemini API Key" }
+      },
+      "retryOnFail": true,
+      "maxTries": 2,
+      "waitBetweenTries": 5000,
+      "onError": "continueRegularOutput",
+      "notes": "Yedek: flash-lite genelde bos kapasiteli. Haber alanlari 'Tek Tek Isle'den okunur cunku girdi birincil Gemini'nin hata govdesidir. Bu da basarisiz olursa kalite kapisi yaziyi atlar."
+    },
+    {
+      "id": "n-hazirla",
+      "name": "Yaziyi Hazirla",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1560, 60],
+      "parameters": {
+        "jsCode": "// Gemini yanitini ayikla. Yanit gecerli Turkce yazi degilse yazi\n// YAYINLANMAZ (atla=true): Ingilizce ham ozet Turkce bloga basilmaz,\n// parmak izi yazilmaz, haber yarinki kosuda yeniden denenir. Kalite,\n// gunluk kotadan onceliklidir.\nconst haber = $('Tek Tek Isle').first().json;\nconst yanit = $input.first().json;\nlet baslik = haber.baslik;\nlet govde = '';\nlet atla = false;\nlet atlamaNedeni = '';\ntry {\n  const metin = yanit.candidates[0].content.parts[0].text\n    .replace(/^```(json)?/m, '').replace(/```\\s*$/m, '').trim();\n  const parsed = JSON.parse(metin);\n  if (parsed.baslik) baslik = String(parsed.baslik).slice(0, 150);\n  govde = String(parsed.html || '');\n} catch (e) {\n  atla = true;\n  atlamaNedeni = 'Gemini yaniti ayristirilamadi: ' + String(e.message).slice(0, 120);\n}\nif (!atla && (!govde || govde.length < 200)) {\n  atla = true;\n  atlamaNedeni = 'Gemini govdesi cok kisa (' + govde.length + ' karakter) - yayin kalitesinde degil';\n}\n// Kaynak atfi her yazida zorunlu: hem durustluk hem Blogger spam\n// filtrelerine karsi en iyi koruma ozgun deger + acik atif.\nconst atif = `<p><em>Kaynak: <a href=\"${haber.link}\" rel=\"nofollow noopener\">${haber.kaynak}</a> - bu yazi gunluk yapay zeka haber derlemesinin parcasidir.</em></p>`;\nreturn [{ json: {\n  blogId: $('Ayarlar').first().json.blogId,\n  anahtar: haber.anahtar,\n  atla: atla,\n  atlamaNedeni: atlamaNedeni,\n  baslikTaslak: baslik,\n  postBody: atla ? null : {\n    kind: 'blogger#post',\n    title: baslik,\n    content: govde + atif,\n    labels: ['Yapay Zeka', 'Gunluk Derleme', haber.kaynak]\n  }\n} }];"
+      }
+    },
+    {
+      "id": "n-atlaif",
+      "name": "Atlansin mi?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [1780, 60],
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "strict", "version": 2 },
+          "combinator": "and",
+          "conditions": [
+            {
+              "id": "c-atla",
+              "leftValue": "={{ $json.atla }}",
+              "rightValue": "",
+              "operator": { "type": "boolean", "operation": "true", "singleValue": true }
+            }
+          ]
+        }
+      },
+      "notes": "true dali = yazi kalitesiz/uretimsiz, dogrudan kayda gecilir (yayin yok). false dali = mukerrer kontrolune devam."
+    },
+    {
+      "id": "n-ara",
+      "name": "Bloggerda Ara",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [2000, 160],
+      "parameters": {
+        "method": "GET",
+        "url": "={{ 'https://www.googleapis.com/blogger/v3/blogs/' + $json.blogId + '/posts/search?fetchBodies=false&q=' + encodeURIComponent($json.postBody.title) }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "googleOAuth2Api",
+        "options": {
+          "timeout": 20000
+        }
+      },
+      "credentials": {
+        "googleOAuth2Api": { "id": "iTqoyVseUDyS4WRY", "name": "Google account" }
+      },
+      "retryOnFail": true,
+      "maxTries": 2,
+      "waitBetweenTries": 5000,
+      "onError": "continueRegularOutput",
+      "notes": "Mukerrer korumasi: ayni baslik blogda zaten varsa yeniden basma. Restart sonrasi yarim kosularda ve olasi yarislarda son savunma hatti - kaynak dogrudan Blogger'in kendi kaydi. Arama basarisiz olursa akis durmaz (fail-open)."
+    },
+    {
+      "id": "n-karar",
+      "name": "Mukerrer Karari",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [2220, 160],
+      "parameters": {
+        "jsCode": "// Blogger aramasinin sonucunu degerlendir: birebir ayni baslikli yazi\n// varsa mukerrer say. Arama hata dondurduyse (veya beklenmedik semada)\n// fail-open: yayina devam - mukerrer korumasi 'en iyi caba' katmanidir,\n// yayin akisini asla kilitlemez.\nconst hazirlanan = $('Yaziyi Hazirla').first().json;\nconst arama = $input.first().json;\nlet mukerrer = false;\ntry {\n  const bulunanlar = Array.isArray(arama.items) ? arama.items : [];\n  mukerrer = bulunanlar.some(p => (p.title || '').trim() === hazirlanan.postBody.title.trim());\n} catch (e) {\n  mukerrer = false;\n}\nreturn [{ json: Object.assign({}, hazirlanan, { mukerrer: mukerrer }) }];"
+      }
+    },
+    {
+      "id": "n-mukerrerif",
+      "name": "Mukerrer mi?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [2440, 160],
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "strict", "version": 2 },
+          "combinator": "and",
+          "conditions": [
+            {
+              "id": "c-mukerrer",
+              "leftValue": "={{ $json.mukerrer }}",
+              "rightValue": "",
+              "operator": { "type": "boolean", "operation": "true", "singleValue": true }
+            }
+          ]
+        }
+      },
+      "notes": "true = blogda zaten var, basma; parmak izi yine kaydedilir ki yarin yeniden secilmesin."
+    },
+    {
+      "id": "n-blogger",
+      "name": "Blogger'a Yayinla",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [2660, 260],
+      "parameters": {
+        "method": "POST",
+        "url": "={{ 'https://www.googleapis.com/blogger/v3/blogs/' + $json.blogId + '/posts/' }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "googleOAuth2Api",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json.postBody) }}",
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "credentials": {
+        "googleOAuth2Api": { "id": "iTqoyVseUDyS4WRY", "name": "Google account" }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 10000,
+      "onError": "continueRegularOutput",
+      "notes": "Credential bagli: 'Google account' (googleOAuth2Api, scope auth/blogger). Yeniden deneme node duzeyinde: 3 deneme, 10 sn arayla."
+    },
+    {
+      "id": "n-kaydet",
+      "name": "Basariyi Kaydet",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [2880, 60],
+      "parameters": {
+        "jsCode": "// Uc yoldan biriyle gelinir: (1) Blogger yayin yaniti, (2) mukerrer\n// tespiti, (3) kalite atlamasi. Yayinlanan VEYA mukerrer haberin parmak\n// izi 7 gunluk tekrar filtresine yazilir (yarin yeniden secilmesin);\n// kalite atlamasinda YAZILMAZ (Gemini duzelince yeniden denensin).\nconst s = $getWorkflowStaticData('global');\nconst y = $input.first().json;\nconst hazirlanan = $('Yaziyi Hazirla').first().json;\nconst yayinlandi = Boolean(y && (y.id || (y.kind === 'blogger#post' && y.url)));\nconst mukerrer = y.mukerrer === true && !yayinlandi;\nconst atlandi = y.atla === true && !yayinlandi && !mukerrer;\nif ((yayinlandi || mukerrer) && hazirlanan.anahtar) {\n  if (!s.yayinlananlar) s.yayinlananlar = {};\n  s.yayinlananlar[hazirlanan.anahtar] = Date.now();\n}\ns.basladi = Date.now();\nreturn [{ json: {\n  basarili: yayinlandi,\n  mukerrer: mukerrer,\n  atlandi: atlandi,\n  atlamaNedeni: hazirlanan.atlamaNedeni || '',\n  anahtar: hazirlanan.anahtar,\n  yayinBasligi: hazirlanan.baslikTaslak\n} }];"
+      }
+    },
+    {
+      "id": "n-bekle",
+      "name": "Yazilar Arasi Bekle",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [3100, 60],
+      "parameters": {
+        "amount": "={{ $('Ayarlar').first().json.yazilarArasiSaniye }}",
+        "unit": "seconds"
+      },
+      "notes": "Sure Ayarlar'daki yazilarArasiSaniye'den gelir: 45=hizli seri, 1800=gune yayilan dogal tempo."
+    },
+    {
+      "id": "n-ozet",
+      "name": "Gunluk Ozet",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1340, -220],
+      "parameters": {
+        "jsCode": "// Dongu bitti: kac yazi yayinlandi, kaci mukerrerdi, kaci kalite\n// nedeniyle atlandi? Kilit yalnizca GERCEK yayin oldugunda kapanir;\n// tamami atlanmis/mukerrer bir gun kilitlenmez - sorun giderilince\n// ayni gun yeniden denenebilir.\nconst s = $getWorkflowStaticData('global');\nconst hepsi = $input.all();\nconst yayinlar = hepsi.filter(i => i.json.basarili === true);\nconst mukerrerler = hepsi.filter(i => i.json.mukerrer === true);\nconst atlananlar = hepsi.filter(i => i.json.atlandi === true);\nconst bugun = new Date().toLocaleDateString('en-CA', { timeZone: 'Europe/Istanbul' });\nif (yayinlar.length > 0) { s.sonYayinTarihi = bugun; }\ns.basladi = null;\nlet durum;\nif (yayinlar.length > 0) durum = 'TAMAM';\nelse if (atlananlar.length === hepsi.length && hepsi.length > 0) durum = 'TAMAMI ATLANDI - Gemini credential/kota kontrol edin';\nelse if (mukerrerler.length > 0) durum = 'YENI ICERIK YOK - secilenlerin tumu blogda zaten vardi';\nelse durum = 'HICBIRI YAYINLANAMADI - Blogger credential ve blogId kontrol edin';\nreturn [{ json: {\n  tarih: bugun,\n  denenen: hepsi.length,\n  yayinlanan: yayinlar.length,\n  mukerrerAtlanan: mukerrerler.length,\n  kaliteAtlanan: atlananlar.length,\n  basliklar: yayinlar.map(i => i.json.yayinBasligi).filter(Boolean),\n  atlamaNedenleri: atlananlar.map(i => i.json.atlamaNedeni).filter(Boolean),\n  durum: durum\n} }];"
+      }
+    }
+  ],
+  "connections": {
+    "Her Gun 09:00": { "main": [[{ "node": "Ayarlar", "type": "main", "index": 0 }]] },
+    "Elle Baslat (Webhook)": { "main": [[{ "node": "Ayarlar", "type": "main", "index": 0 }]] },
+    "Ayarlar": { "main": [[{ "node": "Gunluk Kilit", "type": "main", "index": 0 }]] },
+    "Gunluk Kilit": { "main": [[{ "node": "Devam mi?", "type": "main", "index": 0 }]] },
+    "Devam mi?": {
+      "main": [
+        [{ "node": "Haber Kaynaklari", "type": "main", "index": 0 }],
+        [{ "node": "Bugun Atlandi", "type": "main", "index": 0 }]
+      ]
+    },
+    "Haber Kaynaklari": { "main": [[{ "node": "RSS Oku", "type": "main", "index": 0 }]] },
+    "RSS Oku": { "main": [[{ "node": "Sec ve Siralama", "type": "main", "index": 0 }]] },
+    "Sec ve Siralama": { "main": [[{ "node": "Tek Tek Isle", "type": "main", "index": 0 }]] },
+    "Tek Tek Isle": {
+      "main": [
+        [{ "node": "Gunluk Ozet", "type": "main", "index": 0 }],
+        [{ "node": "Gemini ile Yazi Uret", "type": "main", "index": 0 }]
+      ]
+    },
+    "Gemini ile Yazi Uret": { "main": [[{ "node": "Gemini Yanit Verdi mi?", "type": "main", "index": 0 }]] },
+    "Gemini Yanit Verdi mi?": {
+      "main": [
+        [{ "node": "Yaziyi Hazirla", "type": "main", "index": 0 }],
+        [{ "node": "Yedek Model (Lite)", "type": "main", "index": 0 }]
+      ]
+    },
+    "Yedek Model (Lite)": { "main": [[{ "node": "Yaziyi Hazirla", "type": "main", "index": 0 }]] },
+    "Yaziyi Hazirla": { "main": [[{ "node": "Atlansin mi?", "type": "main", "index": 0 }]] },
+    "Atlansin mi?": {
+      "main": [
+        [{ "node": "Basariyi Kaydet", "type": "main", "index": 0 }],
+        [{ "node": "Bloggerda Ara", "type": "main", "index": 0 }]
+      ]
+    },
+    "Bloggerda Ara": { "main": [[{ "node": "Mukerrer Karari", "type": "main", "index": 0 }]] },
+    "Mukerrer Karari": { "main": [[{ "node": "Mukerrer mi?", "type": "main", "index": 0 }]] },
+    "Mukerrer mi?": {
+      "main": [
+        [{ "node": "Basariyi Kaydet", "type": "main", "index": 0 }],
+        [{ "node": "Blogger'a Yayinla", "type": "main", "index": 0 }]
+      ]
+    },
+    "Blogger'a Yayinla": { "main": [[{ "node": "Basariyi Kaydet", "type": "main", "index": 0 }]] },
+    "Basariyi Kaydet": { "main": [[{ "node": "Yazilar Arasi Bekle", "type": "main", "index": 0 }]] },
+    "Yazilar Arasi Bekle": { "main": [[{ "node": "Tek Tek Isle", "type": "main", "index": 0 }]] }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "Europe/Istanbul"
+  }
+}

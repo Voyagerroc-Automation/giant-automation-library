@@ -8,7 +8,7 @@ Bu depo kod çalıştırmaz; **kaynak-doğruluk (source of truth)** deposudur. n
 
 ## İş Akışı Koleksiyonu
 
-Şu anda `workflows/` altında **5 doğrulanmış iş akışı** bulunur:
+Şu anda `workflows/` altında **7 doğrulanmış iş akışı** bulunur:
 
 | Dosya | Tetikleyici | Ne yapar |
 | :--- | :--- | :--- |
@@ -16,6 +16,8 @@ Bu depo kod çalıştırmaz; **kaynak-doğruluk (source of truth)** deposudur. n
 | `01-video-generation/ugc-factory-sora2-template.json` | Form | Ürün görselini base64'e çevirir, GPT ile persona + reklam promptları üretir, Sora 2 ile video oluşturup Google Drive'a yükler (durum kontrolü + bekleme döngüsüyle) |
 | `01-video-generation/ecommerce-bestseller-veo3-pipeline.json` | Haftalık zamanlayıcı | Algolia'dan haftanın çok satanını çeker, görseli doğrular (eksikse Gmail ile admin'e haber verir), Google VEO 3 ile video üretir, MP4'ü Supabase bucket'a atıp Algolia'da indeksler |
 | `02-social-distribution/youtube-shorts-publisher.json` | Webhook | Metadata/SEO'yu Code node'unda biçimlendirir ve videoyu YouTube Shorts Pipeline servisine HTTP ile iletir |
+| `03-content-creation/ai-haber-blog-otomasyonu.json` | Günlük zamanlayıcı (09:00) + Webhook | RSS kaynaklarından haber seçer, Gemini ile günde 10 blog yazısı üretir, günlük kilit + mükerrer kontrolüyle Blogger'a yayınlar |
+| `03-content-creation/mevcut-yazilari-yeniden-tasarla.json` | Webhook | Mevcut Blogger yazılarını Gemini ile yeniden tasarlar, Wikimedia/Openverse görselleriyle zenginleştirip günceller |
 | `05-monitoring-audit/audit-trail-logger.json` | Webhook | Gelen olayı yapılandırıp Open-LLM-Audit-Trail denetim veritabanına HTTP ile kaydeder |
 
 `templates/` ve `docs/` klasörleri şu an boştur (gelecekteki şablon ve doküman koleksiyonları için ayrılmış yer tutucular).
@@ -73,10 +75,12 @@ Doğrulayıcı (`scripts/validate-workflows.js`) her dosyada şunları denetler:
 workflows/
   01-video-generation/     # 3 video üretim hattı (Seedance, Sora 2, VEO 3)
   02-social-distribution/  # YouTube Shorts yayınlayıcı
+  03-content-creation/     # Blogger içerik otomasyonu (AI haber derlemesi, yazı yenileme)
   05-monitoring-audit/     # Denetim kaydı toplayıcı
 scripts/
   validate-workflows.js    # Yapısal doğrulayıcı
   sync-workflows.js        # Doğrulamayı zorunlu kılan senkron sarmalayıcı
+  BLOG-BEKCISI.ps1         # Docker açılışında AI Haber Derlemesi'ni tetiklemeyi öneren Windows bekçisi
 templates/, docs/          # Boş (planlanan içerik)
 ```
 

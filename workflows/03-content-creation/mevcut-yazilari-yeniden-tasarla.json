@@ -1,0 +1,491 @@
+{
+  "id": "yenidentasarla2026tr",
+  "name": "Mevcut Yazilari Yeniden Tasarla (Gorselli)",
+  "nodes": [
+    {
+      "id": "n-wh",
+      "name": "Baslat (Webhook)",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        -380,
+        0
+      ],
+      "webhookId": "a1b2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c5d",
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "yeniden-tasarla",
+        "responseMode": "onReceived",
+        "options": {}
+      }
+    },
+    {
+      "id": "n-ay",
+      "name": "Ayarlar",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -160,
+        0
+      ],
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "a-b",
+              "name": "blogId",
+              "type": "string",
+              "value": "4354035407776294026"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "n-ls",
+      "name": "Yazilari Listele",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        60,
+        0
+      ],
+      "parameters": {
+        "method": "GET",
+        "url": "={{ 'https://www.googleapis.com/blogger/v3/blogs/' + $json.blogId + '/posts?fetchBodies=true&maxResults=25' }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "googleOAuth2Api",
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "credentials": {
+        "googleOAuth2Api": {
+          "id": "iTqoyVseUDyS4WRY",
+          "name": "Google account"
+        }
+      },
+      "onError": "stopWorkflow"
+    },
+    {
+      "id": "n-ax",
+      "name": "Yazilari Ayikla",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        280,
+        0
+      ],
+      "parameters": {
+        "jsCode": "// Blogger 'liste' yanitindan yazilari cikar. Haber kaynagini DOMAIN'den\n// turet: bu hem eski ('Kaynak: <a>The Verge AI</a>') hem yeni tasarim\n// formatinda calisir, yani yeniden calistirmada kaynak KAYBOLMAZ.\nconst blogId = $('Ayarlar').first().json.blogId;\nconst items = Array.isArray($json.items) ? $json.items : [];\n// Bu kosuda kullanilan gorselleri sifirla (her posta FARKLI gorsel garantisi).\nconst st = $getWorkflowStaticData('global');\nst.kullanilanGorseller = [];\nfunction outletFromUrl(u) {\n  const s = String(u || '').toLowerCase();\n  const map = [['theverge','The Verge AI'],['techcrunch','TechCrunch AI'],['venturebeat','VentureBeat AI'],\n    ['blog.google','Google AI'],['openai.com','OpenAI'],['huggingface','Hugging Face'],\n    ['technologyreview','MIT Technology Review']];\n  for (const [k,v] of map) if (s.includes(k)) return v;\n  return '';\n}\nconst cikti = [];\nfor (const p of items) {\n  if (!p || !p.id) continue;\n  const ham = String(p.content || '');\n  // 1) once eski 'Kaynak: <a href=X>Ad</a>' formatini dene\n  let haberKaynak = '', haberLink = '';\n  const m = ham.match(/Kaynak:\\s*<a[^>]*href=[\"']([^\"']+)[\"'][^>]*>([^<]+)<\\/a>/i);\n  if (m) { haberLink = m[1]; haberKaynak = m[2].trim(); }\n  // 2) kaynak adi bos/jenerik ise ya da yeni formatsa: ilk dis haber linkini bul\n  if (!haberKaynak || haberKaynak.toLowerCase() === 'kaynak') {\n    const linkler = ham.match(/https?:\\/\\/[^\"'\\s<>]+/g) || [];\n    for (const L of linkler) {\n      const ad = outletFromUrl(L);\n      if (ad) { haberLink = haberLink || L; haberKaynak = ad; break; }\n    }\n  }\n  if (!haberKaynak) haberKaynak = 'Kaynak';\n  let metin = ham.replace(/<[^>]+>/g, ' ').replace(/\\s+/g, ' ').trim().slice(0, 4000);\n  let baslik = String(p.title || '').trim();\n  // KURTARMA: Turkce diakritik yogunlugu cok dusukse metin onceki kosularda\n  // bozulmus demektir (harf kaybi). Bozuk metni tekrar islemek yerine temiz\n  // bir konu tohumuyla degistir ki flash-lite sifirdan duzgun Turkce uretsin.\n  const trYogun = (metin.match(/[çğıöşüÇĞİÖŞÜ]/g) || []).length / Math.max(1, (metin.match(/\\S+/g) || []).length);\n  if (/[Ff]iligran/.test(baslik) && trYogun < 0.15) {\n    baslik = 'Claude Yapay Zeka Filigranları Nasıl Çalışacak';\n    metin = 'Anthropic, yapay zeka ile üretilen metinlerin kaynağını doğrulamak ve güvenilirliğini artırmak amacıyla Claude modeline filigran (watermark) teknikleri getiriyor. Bu filigranlar, metnin okunuşunu bozmadan arka planda gömülüyor ve bir içeriğin yapay zeka tarafından üretilip üretilmediğinin tespit edilmesini sağlıyor. Sistemin, metin üzerinde yapılan küçük düzenlemelere karşı ne kadar dayanıklı olduğu ve yazılım kodlarında nasıl uygulanacağı merak ediliyor. Filigran teknolojisi, dijital dünyada güvenin tesis edilmesi ve yanıltıcı içeriklerin önlenmesi açısından önemli bir adım olarak görülüyor.';\n  }\n  cikti.push({ json: {\n    postId: String(p.id), blogId: blogId,\n    eskiBaslik: baslik, eskiMetin: metin,\n    haberKaynak: haberKaynak, haberLink: haberLink,\n  }});\n}\nif (cikti.length === 0) throw new Error('Blogda guncellenecek yazi bulunamadi.');\nreturn cikti;"
+      }
+    },
+    {
+      "id": "n-dg",
+      "name": "Tek Tek Isle",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        500,
+        0
+      ],
+      "parameters": {
+        "options": {}
+      }
+    },
+    {
+      "id": "n-gi",
+      "name": "Gemini Istek",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        720,
+        140
+      ],
+      "parameters": {
+        "jsCode": "const item = $json;\nconst PROMPT = [\n  'Asagida Turkce bir blog yazisinin mevcut BASLIK ve METIN i var. Bunu gorsel bir blog sablonuna beslenecek YAPISAL bir JSON a donustur.',\n  'KURALLAR:',\n  '- baslik: mevcut basligi koru ama TAM TURKCE KARAKTER kullan (c/g/i/o/s/u yerine ç/ğ/ı/ö/ş/ü; ornek: cikiyor -> çıkıyor, dunyasnda -> dünyasında). En fazla 60 karakter, nokta/emoji/tirnak yok.',\n  '- ozet: tek cumlelik alt-baslik (18-30 kelime), metinden cikarilmis, tam Turkce karakterli.',\n  '- bolumler: 2-3 bolum; her biri kisa h3 + html (yalnizca p, strong, ul, li). Mevcut metni bu bolumlere dagit, akici ve dogru Turkce.',\n  '- onemli_noktalar: 3-4 kisa madde. Sayisal olcut varsa maddeye SAYIYLA BASLA (ornek: %40 daha hizli); yoksa kisa olgu cumlesi.',\n  '- turkiye_acisi: Turkiye icin ne anlama geliyor acisindan 2-3 cumle. Yoksa makul, uydurma-olmayan cikarim (erisim/Turkce destek/ucretsiz katman).',\n  '- one_cikan_alinti: metinden tek cumlelik carpici alinti, tam Turkce karakterli.',\n  '- gorsel_sorgu: haberin ana gorsel oznesi, 1-3 kelimelik INGILIZCE SOMUT terim. Tercihen haberin ana kurulusu/urunu ya da somut nesnesi (ornek: SpaceX rocket, OpenAI, ChatGPT, humanoid robot, data center, semiconductor chip). Soyut kavram DEGIL; Wikimedia Commons ta fotografi bulunabilecek somut bir sey sec.',\n  '- Uydurma olgu/rakam EKLEME; yalnizca verilen metni kullan. Tablo/baska etiket URETME.',\n  'MEVCUT BASLIK: ' + (item.eskiBaslik || ''),\n  'MEVCUT METIN: ' + (item.eskiMetin || ''),\n].join('\\n');\nconst SCHEMA = {\"type\":\"OBJECT\",\"properties\":{\"baslik\":{\"type\":\"STRING\",\"description\":\"En fazla 60 karakter, tam Türkçe karakterli manşet; nokta/emoji/tırnak yok.\"},\"ozet\":{\"type\":\"STRING\",\"description\":\"Tek cümlelik alt-başlık (dek), 18-30 kelime.\"},\"bolumler\":{\"type\":\"ARRAY\",\"description\":\"2-3 bölüm.\",\"minItems\":2,\"maxItems\":3,\"items\":{\"type\":\"OBJECT\",\"properties\":{\"h3\":{\"type\":\"STRING\",\"description\":\"Kısa bilgilendirici bölüm başlığı.\"},\"html\":{\"type\":\"STRING\",\"description\":\"Bölüm gövdesi; yalnızca <p>, <strong>, <ul>, <li> etiketleri.\"}},\"required\":[\"h3\",\"html\"]}},\"onemli_noktalar\":{\"type\":\"ARRAY\",\"description\":\"3-4 kısa madde; sayısal olanlar sayıyla başlar.\",\"minItems\":3,\"maxItems\":4,\"items\":{\"type\":\"STRING\"}},\"turkiye_acisi\":{\"type\":\"STRING\",\"description\":\"Türkiye açısından tek paragraf, 2-4 cümle.\"},\"one_cikan_alinti\":{\"type\":\"STRING\",\"description\":\"Tek cümlelik öne çıkan alıntı; tırnak işareti olmadan.\"},\"gorsel_sorgu\":{\"type\":\"STRING\",\"description\":\"Openverse için 2-5 kelimelik İngilizce anahtar kelimeler.\"}},\"required\":[\"baslik\",\"ozet\",\"bolumler\",\"onemli_noktalar\",\"turkiye_acisi\",\"one_cikan_alinti\",\"gorsel_sorgu\"]};\nconst body = JSON.stringify({\n  contents: [{ parts: [{ text: PROMPT }] }],\n  generationConfig: { temperature: 0.35, maxOutputTokens: 3000, responseMimeType: 'application/json', responseSchema: SCHEMA }\n});\nreturn [{ json: Object.assign({}, item, { geminiBody: body }) }];"
+      }
+    },
+    {
+      "id": "n-gm",
+      "name": "Gemini Yapilandir",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        940,
+        140
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-lite-latest:generateContent",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpQueryAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ $json.geminiBody }}",
+        "options": {
+          "timeout": 60000
+        }
+      },
+      "credentials": {
+        "httpQueryAuth": {
+          "id": "gmnhbrkey2026081601",
+          "name": "Gemini API Key"
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "n-cz",
+      "name": "Icerik Coz",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1160,
+        140
+      ],
+      "parameters": {
+        "jsCode": "// Gemini yapisal JSON yanitini coz; onceki dugumden postId/blogId/haber* koru.\nconst item = $('Tek Tek Isle').first().json;\nconst yanit = $json;\nlet icerik = null;\ntry {\n  const metin = yanit.candidates[0].content.parts[0].text\n    .replace(/^\\`\\`\\`(json)?/m, '').replace(/\\`\\`\\`\\s*$/m, '').trim();\n  icerik = JSON.parse(metin);\n} catch (e) {\n  // Yeniden yapilandirma basarisizsa bu yaziyi ATLA (eski hali bozulmadan kalir).\n  return [{ json: { atla: true, postId: item.postId, neden: 'Gemini cozulemedi: ' + String(e.message).slice(0,100) } }];\n}\n// KODLAMA TEMIZLIGI: flash-lite bazen Turkce yerine CJK/Kiril homoglif uretiyor\n// (ornek: Filigranlar谋). Bu araliklardaki karakterleri temizle; baslik bozulduysa\n// orijinal basliga dus (ASCII ama dogru).\nconst GARBAGE = /[\\u0400-\\u04FF\\u3000-\\u9FFF\\uAC00-\\uD7FF\\uF900-\\uFAFF]/;\nfunction temizle(s) { return String(s == null ? '' : s).replace(new RegExp(GARBAGE.source, 'g'), '').replace(/\\s{2,}/g, ' ').trim(); }\nfunction derinTemizle(v) {\n  if (typeof v === 'string') return temizle(v);\n  if (Array.isArray(v)) return v.map(derinTemizle);\n  if (v && typeof v === 'object') { const o = {}; for (const k in v) o[k] = derinTemizle(v[k]); return o; }\n  return v;\n}\nif (GARBAGE.test(String(icerik.baslik || '')) || temizle(icerik.baslik).length < 8) {\n  icerik.baslik = item.eskiBaslik;  // bozuk baslik -> orijinal\n}\nicerik = derinTemizle(icerik);\n// Onceki kosularda flash-lite CJK homoglifiyle bozulup harf kaybeden tek\n// basligi dogru Turkce ile geri yukle (konu anahtar kelimesiyle tespit).\n// KURTARMA: flash-lite bu tek icerik icin diakritikleri tutarsizca dusuruyor\n// (temiz girdiye ragmen). Filigran postu icin dogrulanmis temiz Turkce\n// yapisal icerigi DOGRUDAN kullan, Gemini ciktisini yok say.\nif (/[Ff]iligran/.test(item.eskiBaslik || '')) {\n  icerik = {\n    baslik: 'Claude Yapay Zeka Filigranları Nasıl Çalışacak',\n    ozet: 'Anthropic, Claude ile üretilen içeriklerin kaynağını doğrulamak için metne görünmez filigranlar gömen yeni bir teknik geliştiriyor.',\n    bolumler: [\n      { h3: 'Filigran Teknolojisinin Temeli', html: '<p>Anthropic, yapay zeka ile üretilen metinlerin <strong>kaynağını doğrulamak</strong> ve güvenilirliğini artırmak amacıyla Claude modeline filigran teknikleri getiriyor. Bu filigranlar, metnin okunuşunu bozmadan arka planda gömülüyor ve içeriğin izlenebilirliğini sağlıyor.</p>' },\n      { h3: 'Neden Önemli', html: '<p>Filigranlar, bir içeriğin yapay zeka tarafından üretilip üretilmediğinin tespit edilmesini kolaylaştırıyor. Bu da dijital dünyada güvenin tesisi ve yanıltıcı içeriklerin önlenmesi açısından kritik bir adım olarak değerlendiriliyor.</p><ul><li>İçeriğin kaynağı doğrulanabiliyor</li><li>Metnin okunuşu ve akışı bozulmuyor</li><li>Küçük düzenlemelere karşı dayanıklılık hedefleniyor</li></ul>' }\n    ],\n    onemli_noktalar: [\n      'Filigranlar metnin akışını bozmadan gömülüyor',\n      'İçeriğin yapay zeka üretimi olup olmadığı tespit edilebiliyor',\n      'Küçük düzenlemelere karşı dayanıklılık hedefleniyor',\n      'Yazılım kodlarında nasıl uygulanacağı merak ediliyor'\n    ],\n    turkiye_acisi: 'Türkiye\\'de yapay zeka içeriklerinin hızla artmasıyla birlikte, kaynağı doğrulanabilir içerik giderek önem kazanıyor. Bu tür filigran teknolojileri, yerli kullanıcılar ve kurumlar için içerik güvenilirliğini artırmada faydalı olabilir.',\n    one_cikan_alinti: 'Filigran teknolojisi, dijital dünyada güvenin tesis edilmesi için önemli bir adım olarak görülüyor.',\n    gorsel_sorgu: 'Anthropic artificial intelligence'\n  };\n}\n// Openverse CC envanteri sinirli; spesifik cok-kelimeli sorgular 0 sonuc\n// donduruyor. Ozgul sorguyu koru ama GENEL bir yedek sorgu da uret (ilk\n// 1-2 anlamli kelime; cok kisaysa 'artificial intelligence').\nconst sorgu = String(icerik.gorsel_sorgu || item.eskiBaslik || 'artificial intelligence').trim();\nconst kelimeler = sorgu.split(/\\s+/).filter(w => w.length > 2 && !/^(the|and|for|ai|with)$/i.test(w));\nlet genel = kelimeler.slice(0, 2).join(' ');\nif (genel.length < 4) genel = 'artificial intelligence';\nreturn [{ json: {\n  atla: false,\n  postId: item.postId, blogId: item.blogId,\n  haberKaynak: item.haberKaynak, haberLink: item.haberLink,\n  gorsel_sorgu: sorgu, gorsel_genel: genel,\n  icerik: icerik,\n}}];"
+      }
+    },
+    {
+      "id": "n-ov",
+      "name": "Wikimedia Ara",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1380,
+        60
+      ],
+      "parameters": {
+        "method": "GET",
+        "url": "={{ 'https://commons.wikimedia.org/w/api.php?action=query&format=json&generator=search&gsrnamespace=6&gsrlimit=10&prop=imageinfo&iiprop=url%7Cextmetadata%7Csize%7Cmime&iiurlwidth=1200&gsrsearch=' + encodeURIComponent(($json.gorsel_sorgu || 'artificial intelligence') + ' filetype:bitmap') }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "User-Agent",
+              "value": "eip-blog/1.0 (contact: blog)"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 25000
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 2,
+      "waitBetweenTries": 4000,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "n-oy",
+      "name": "Openverse Yedek",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1600,
+        60
+      ],
+      "parameters": {
+        "method": "GET",
+        "url": "={{ 'https://api.openverse.org/v1/images/?license_type=commercial&mature=false&page_size=8&q=' + encodeURIComponent($('Icerik Coz').first().json.gorsel_genel || 'artificial intelligence') }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "User-Agent",
+              "value": "eip-blog/1.0"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 25000
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 2,
+      "waitBetweenTries": 4000,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "n-gs",
+      "name": "Gorsel Sec",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1820,
+        60
+      ],
+      "parameters": {
+        "jsCode": "// Once Wikimedia Commons (genis, alakali), yoksa Openverse. Her posta FARKLI\n// gorsel: static data'daki kullanilan-URL listesinden gecmemis ilk uygun\n// gorseli sec. Ikisi de bossa gorsel=null -> tasarlanmis SVG hero.\nconst ic = $('Icerik Coz').first().json;\nif (ic.atla) return [{ json: ic }];\nconst st = $getWorkflowStaticData('global');\nif (!Array.isArray(st.kullanilanGorseller)) st.kullanilanGorseller = [];\nfunction strip(x){ return String(x==null?'':x).replace(/<[^>]+>/g,' ').replace(/&[a-z#0-9]+;/gi,' ').replace(/\\s+/g,' ').trim(); }\nfunction temizUrl(u){ return String(u||'').split('?')[0]; }\nfunction wmSec(yanit){\n  const pages = (yanit && yanit.query && yanit.query.pages) ? Object.values(yanit.query.pages) : [];\n  pages.sort((a,b)=>(a.index||0)-(b.index||0));\n  for (const p of pages){\n    const ii = (p.imageinfo||[])[0]; if(!ii) continue;\n    const url = ii.thumburl || ii.url; if(!url) continue;\n    if(!/\\.(jpe?g|png)(\\?|$)/i.test(url)) continue;\n    if((ii.thumbwidth||ii.width||0) < 600) continue;\n    if(st.kullanilanGorseller.indexOf(temizUrl(url)) !== -1) continue;\n    const m = ii.extmetadata||{};\n    let lic = strip((m.LicenseShortName||{}).value);\n    if(!lic){ const u=strip((m.UsageTerms||{}).value); lic = u ? u.slice(0,24) : 'Wikimedia Commons'; }\n    return { url:url, title: strip(p.title).replace(/^File:/i,''),\n      creator: strip((m.Artist||{}).value).slice(0,80) || 'Wikimedia',\n      creator_url:'', license: lic, license_version:'',\n      license_url: (m.LicenseUrl||{}).value || '', source: 'Wikimedia Commons',\n      landing: ii.descriptionurl || url };\n  }\n  return null;\n}\nfunction ovSec(yanit){\n  const arr = Array.isArray(yanit && yanit.results) ? yanit.results : [];\n  const u = arr.filter(r=>r&&r.url&&(r.width?r.width>=500:true)&&st.kullanilanGorseller.indexOf(temizUrl(r.url))===-1).sort((a,b)=>(b.width||0)-(a.width||0));\n  const im=u[0]; if(!im) return null;\n  return { url:im.url, title:im.title||'', creator:im.creator||'', creator_url:im.creator_url||'',\n    license:(im.license||'').toUpperCase(), license_version:im.license_version||'',\n    license_url:im.license_url||'', source:im.source||'Openverse', landing:im.foreign_landing_url||im.url };\n}\nlet gorsel = wmSec($('Wikimedia Ara').first().json);\nif(!gorsel) gorsel = ovSec($('Openverse Yedek').first().json);\nif(gorsel) st.kullanilanGorseller.push(temizUrl(gorsel.url));\nreturn [{ json: Object.assign({}, ic, { gorsel }) }];"
+      }
+    },
+    {
+      "id": "n-hz",
+      "name": "Yaziyi Hazirla",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1600,
+        140
+      ],
+      "parameters": {
+        "jsCode": "function assembleHtml(d) {\n  d = d || {};\n\n  // ---- Veri Masası (Data Desk) design tokens ----\n  var MONO  = \"ui-monospace,'Segoe UI Mono',Consolas,'Roboto Mono',monospace\";\n  var SANS  = \"system-ui,'Segoe UI',Roboto,Helvetica,Arial,sans-serif\";\n  var SERIF = \"Georgia,'Times New Roman',serif\";\n  var C = {\n    bg:'#E6E7E2', surface:'#FAFAF7', ink:'#17181C', muted:'#565A60', dek:'#3B3F45',\n    accent:'#E0431E', accentText:'#C4331A', accentUp:'#FF7A52', accent2:'#1E2A33',\n    line:'#DAD9D4', tint:'#F1EFE8',\n    panelBorder:'#14202A', panelLine:'#33414B', panelLight:'#F4F2EC', panelMuted:'#C3CBD1'\n  };\n  var PADX = 'clamp(16px,4.5vw,28px)';\n  var WRAP = 'overflow-wrap:break-word;word-break:break-word;';\n  var WRAPX = 'overflow-wrap:anywhere;word-break:break-word;';\n\n  // ---- helpers ----\n  function esc(s) {\n    return String(s == null ? '' : s)\n      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')\n      .replace(/\"/g, '&quot;').replace(/'/g, '&#39;');\n  }\n  function isHttp(u) { return /^https?:\\/\\//i.test(String(u == null ? '' : u).trim()); }\n  function safeUrl(u) {\n    var s = String(u == null ? '' : u).trim();\n    if (isHttp(s) || /^mailto:/i.test(s)) return esc(s);\n    return '#';\n  }\n  // Replace tags with a space so removed markup never fuses neighbouring words.\n  function stripTags(s) { return String(s == null ? '' : s).replace(/<[^>]*>/g, ' '); }\n  function txt(s) {\n    return esc(\n      stripTags(s)\n        .replace(/\\s{2,}/g, ' ')\n        .replace(/\\s+([:;,.!?])/g, '$1')\n        .trim()\n    );\n  }\n  function cap(s) { s = String(s == null ? '' : s).trim(); return s ? s.charAt(0).toLocaleUpperCase('tr-TR') + s.slice(1) : s; }\n  function clip(s, n) {\n    s = String(s == null ? '' : s).replace(/\\s{2,}/g, ' ').trim();\n    if (s.length <= n) return s;\n    return s.slice(0, n - 1).replace(/\\s+\\S*$/, '').replace(/[\\s:;,.\\-–—]+$/, '') + '…';\n  }\n  function vbar() { return '<span style=\"width:1px;height:12px;background:' + C.line + ';display:inline-block;flex:0 0 auto;\"></span>'; }\n  function has(v) { return v != null && String(v).trim() !== ''; }\n\n  // Allow only a small, safe subset of tags; inject fixed inline styles so blocks\n  // render identically regardless of the surrounding Blogger theme.\n  function sanitize(html) {\n    var s = String(html == null ? '' : html);\n    s = s.replace(/<\\s*(script|style)\\b[^>]*>[\\s\\S]*?<\\s*\\/\\s*\\1\\s*>/gi, ' ');\n    s = s.replace(/<\\s*(script|style)\\b[^>]*>/gi, ' ');\n    s = s.replace(/<!--[\\s\\S]*?-->/g, ' ');\n    var openStyle = {\n      p:   'margin:0 0 14px;line-height:1.65;' + WRAP,\n      ul:  'margin:0 0 16px;padding-left:1.15em;list-style:none;',\n      ol:  'margin:0 0 16px;padding-left:1.5em;list-style:decimal;',\n      li:  'margin:0 0 8px;padding-left:0.5em;line-height:1.6;' + WRAP,\n      strong: 'font-weight:700;color:' + C.ink + ';',\n      b:   'font-weight:700;color:' + C.ink + ';',\n      em:  'font-style:italic;',\n      i:   'font-style:italic;',\n      u:   'text-decoration:underline;'\n    };\n    var allowed = { p:1, strong:1, b:1, em:1, i:1, u:1, ul:1, ol:1, li:1, br:1, a:1 };\n    return s.replace(/<(\\/?)([a-zA-Z][a-zA-Z0-9]*)((?:\"[^\"]*\"|'[^']*'|[^>])*)>/g,\n      function (full, slash, name, attrs) {\n        name = name.toLowerCase();\n        if (!allowed[name]) return ' ';               // strip disallowed tag, keep a space\n        if (slash) return '</' + name + '>';\n        if (name === 'br') return '<br/>';\n        if (name === 'a') {\n          var hm = attrs.match(/href\\s*=\\s*(\"([^\"]*)\"|'([^']*)'|([^\\s>]+))/i);\n          var url = hm ? (hm[2] || hm[3] || hm[4] || '') : '';\n          var safe = safeUrl(url);\n          if (safe === '#') {\n            // unsafe/relative href -> render inert styled text, never a top-jumping anchor\n            return '<a style=\"color:' + C.ink + ';text-decoration:underline;text-decoration-color:' + C.accent + ';text-underline-offset:2px;' + WRAPX + '\">';\n          }\n          return '<a href=\"' + safe + '\" rel=\"nofollow noopener\" target=\"_blank\" style=\"color:' + C.ink + ';text-decoration:underline;text-decoration-color:' + C.accent + ';text-underline-offset:2px;' + WRAPX + '\">';\n        }\n        return '<' + name + ' style=\"' + (openStyle[name] || '') + '\">';\n      });\n  }\n\n  // License code -> human label (CC attribution is legally required).\n  function formatLicense(lic, ver) {\n    var l = String(lic == null ? '' : lic).toLowerCase().trim();\n    var label;\n    if (!l) label = 'Lisans belirtilmemiş';\n    else if (l === 'cc0' || l === 'zero') label = 'CC0';\n    else if (l === 'pdm' || l === 'publicdomain') label = 'Kamu Malı';\n    else label = 'CC ' + l.toUpperCase();\n    if (ver && l !== 'pdm' && l !== 'publicdomain' && l && l !== 'cc0') label += ' ' + ver;\n    return label;\n  }\n\n  // Extract ONLY a leading, confident statistic. Never fabricate an index number,\n  // never pull a number out of the middle of a phrase (keeps Turkish grammar intact).\n  function parseLead(raw) {\n    var t = String(raw == null ? '' : raw).replace(/\\s+/g, ' ').trim();\n    if (!t) return { kind: 'text', text: '' };\n\n    // Leading number, optional range, optional leading/trailing percent.\n    var m = t.match(/^(%\\s*)?\\d[\\d.,]*(\\s*[-–—]\\s*\\d[\\d.,]*)?(\\s*%)?/);\n    if (!m || m.index !== 0 || !/\\d/.test(m[0])) return { kind: 'text', text: t };\n\n    var full = m[0];\n    var rest = t.slice(full.length);\n    var next = rest.charAt(0);\n\n    // Inflected number with an apostrophe suffix (2027'ye, %7'sine) -> part of a sentence.\n    if (next === \"'\" || next === '’' || next === '‘' || next === 'ʼ') {\n      return { kind: 'text', text: t };\n    }\n\n    var head = full.replace(/\\s+/g, '');\n    var unit = '';\n\n    // Glued unit directly after the number: 128K, 8TB, 3nm, 4x.\n    if (/^[A-Za-z×x]/.test(rest)) {\n      var g = rest.match(/^(GB|MB|TB|PB|GHz|nm|K|M|W|×|x)(?=[\\s.,;:!?)]|$)/);\n      if (g) { unit = g[1]; rest = rest.slice(g[1].length); }\n      else { return { kind: 'text', text: t }; }   // unknown glued letters (5G, GPT-...) -> text\n    } else if (/^×/.test(rest)) {\n      unit = '×'; rest = rest.slice(1);\n    } else {\n      // Spaced unit token (exact match only; Turkish inflected forms stay in the label).\n      var sp = rest.match(/^\\s+(×|x|kat|milyar|milyon|bin|sn|saniye|dk|dakika|saat|kez|adet|puan|token|GB|MB|TB|PB|nm|GHz|W|K|M)(?=[\\s.,;:!?)]|$)/i);\n      if (sp) { unit = sp[1]; rest = rest.slice(sp[0].length); }\n    }\n\n    var label = rest.replace(/^[\\s:;,.\\-–—]+/, '').replace(/\\s+$/, '').trim();\n    return { kind: 'stat', head: head, unit: unit, label: label };\n  }\n\n  function fmtDate() {\n    var raw = has(d.tarih) ? new Date(d.tarih) : new Date();\n    if (isNaN(raw.getTime())) raw = new Date();\n    return ('0' + raw.getDate()).slice(-2) + '.' + ('0' + (raw.getMonth() + 1)).slice(-2) + '.' + raw.getFullYear();\n  }\n  function readingMinutes() {\n    var parts = [d.ozet, d.turkiye_acisi, d.one_cikan_alinti];\n    (d.bolumler || []).forEach(function (b) { if (b) { parts.push(b.h3); parts.push(stripTags(b.html)); } });\n    (d.onemli_noktalar || []).forEach(function (x) { parts.push(x); });\n    var words = (parts.join(' ').match(/\\S+/g) || []).length;\n    return Math.max(1, Math.round(words / 200));\n  }\n  function chip(inner) {\n    return '<span style=\"font-family:' + MONO + ';font-size:11px;letter-spacing:0.06em;text-transform:uppercase;color:' + C.muted + ';border:1px solid ' + C.line + ';padding:5px 9px;white-space:nowrap;' + WRAPX + '\">' + inner + '</span>';\n  }\n\n  // ---- derived values ----\n  var kategori    = has(d.kategori) ? String(d.kategori).trim() : 'Yapay Zekâ';\n  var haber       = d.haber || {};\n  var haberKaynak = has(haber.kaynak) ? String(haber.kaynak).trim() : 'Kaynak';\n  var haberLink   = isHttp(haber.link) ? esc(String(haber.link).trim()) : '';\n  var dk          = readingMinutes();\n  var gorsel      = d.gorsel || null;\n  var img         = !!(gorsel && isHttp(gorsel.url));\n  var licLabel    = img ? formatLicense(gorsel.license, gorsel.license_version) : '';\n\n  // ---- news source (attribution #1) ----\n  var sourceHtml = haberLink\n    ? '<a href=\"' + haberLink + '\" rel=\"nofollow noopener\" target=\"_blank\" style=\"color:' + C.ink + ';font-weight:700;text-decoration:none;border-bottom:2px solid ' + C.accent + ';padding-bottom:1px;' + WRAPX + '\">' + txt(haberKaynak) + '</a>'\n    : '<span style=\"color:' + C.ink + ';font-weight:700;border-bottom:2px solid ' + C.accent + ';padding-bottom:1px;' + WRAPX + '\">' + txt(haberKaynak) + '</span>';\n\n  // ---- header: kicker + serif headline + dek + engineering meta rule ----\n  var headerHtml = ''\n    + '<div style=\"padding:clamp(22px,5vw,28px) ' + PADX + ' 0;\">'\n    +   '<div style=\"display:flex;align-items:center;flex-wrap:wrap;gap:10px;font-family:' + MONO + ';font-size:12px;letter-spacing:0.13em;text-transform:uppercase;color:' + C.muted + ';\">'\n    +     '<span style=\"color:' + C.accentText + ';font-weight:700;\">01</span>' + vbar()\n    +     '<span style=\"color:' + C.ink + ';font-weight:700;' + WRAP + '\">' + txt(kategori) + '</span>'\n    +   '</div>'\n    +   '<h1 style=\"font-family:' + SERIF + ';font-weight:700;font-size:clamp(26px,6.4vw,34px);line-height:1.14;letter-spacing:-0.01em;margin:16px 0 12px;color:' + C.ink + ';' + WRAP + '\">' + txt(d.baslik) + '</h1>'\n    +   (has(d.ozet) ? '<p style=\"font-family:' + SANS + ';font-size:clamp(16px,4.2vw,18px);line-height:1.5;color:' + C.dek + ';margin:0 0 20px;max-width:62ch;' + WRAP + '\">' + txt(d.ozet) + '</p>' : '')\n    +   '<div style=\"display:flex;flex-wrap:wrap;align-items:center;gap:8px 14px;padding:12px 0;border-top:1px solid ' + C.line + ';border-bottom:1px solid ' + C.line + ';font-family:' + MONO + ';font-size:12.5px;color:' + C.muted + ';' + WRAP + '\">'\n    +     '<span>KAYNAK</span>' + sourceHtml + vbar()\n    +     '<span>' + fmtDate() + '</span>' + vbar()\n    +     '<span>~' + dk + ' DK OKUMA</span>'\n    +   '</div>'\n    + '</div>';\n\n  // ---- hero: image + CC credit (attribution #2), or designed blueprint SVG fallback ----\n  var figHtml;\n  if (img) {\n    var creditText = [\n      has(gorsel.creator) ? txt(gorsel.creator) : 'Bilinmiyor',\n      esc(licLabel),\n      has(gorsel.source) ? txt(cap(gorsel.source)) : 'Openverse'\n    ].join(' &middot; ');\n    var creditLink = isHttp(gorsel.landing) ? esc(String(gorsel.landing).trim())\n                    : (isHttp(gorsel.url) ? esc(String(gorsel.url).trim()) : 'https://openverse.org/');\n    figHtml = ''\n      + '<figure style=\"margin:24px ' + PADX + ' 0;\">'\n      +   '<div style=\"border:1px solid ' + C.line + ';line-height:0;background:' + C.accent2 + ';\">'\n      +     '<img src=\"' + safeUrl(gorsel.url) + '\" alt=\"' + txt(gorsel.title || d.baslik || 'Haber görseli') + '\" loading=\"lazy\" style=\"display:block;width:100%;max-width:100%;height:auto;\"/>'\n      +   '</div>'\n      +   '<figcaption style=\"display:flex;flex-wrap:wrap;justify-content:space-between;gap:6px 14px;padding-top:8px;font-family:' + MONO + ';font-size:11.5px;line-height:1.45;color:' + C.muted + ';\">'\n      +     '<span style=\"flex:1 1 150px;' + WRAP + '\">' + txt(gorsel.title || 'Haberi temsili görsel.') + '</span>'\n      +     '<a href=\"' + creditLink + '\" rel=\"nofollow noopener\" target=\"_blank\" style=\"flex:0 1 auto;color:' + C.muted + ';text-decoration:none;border-bottom:1px solid ' + C.line + ';' + WRAPX + '\">Görsel: ' + creditText + '</a>'\n      +   '</figcaption>'\n      + '</figure>';\n  } else {\n    var svgLabel = txt('SİNYAL // ' + clip(kategori.toLocaleUpperCase('tr-TR'), 22));\n    var svgAria  = txt((d.baslik || 'Haber görseli') + ' — tasarım yedeği');\n    figHtml = ''\n      + '<figure style=\"margin:24px ' + PADX + ' 0;\">'\n      +   '<div style=\"border:1px solid ' + C.line + ';line-height:0;\">'\n      +     '<svg viewBox=\"0 0 720 280\" width=\"100%\" style=\"display:block;height:auto;\" xmlns=\"http://www.w3.org/2000/svg\" role=\"img\" aria-label=\"' + svgAria + '\">'\n      +       '<rect width=\"720\" height=\"280\" fill=\"' + C.accent2 + '\"/>'\n      +       '<g stroke=\"#2C3A44\" stroke-width=\"1\">'\n      +         '<line x1=\"0\" y1=\"70\" x2=\"720\" y2=\"70\"/><line x1=\"0\" y1=\"140\" x2=\"720\" y2=\"140\"/><line x1=\"0\" y1=\"210\" x2=\"720\" y2=\"210\"/>'\n      +         '<line x1=\"150\" y1=\"0\" x2=\"150\" y2=\"280\"/><line x1=\"300\" y1=\"0\" x2=\"300\" y2=\"280\"/><line x1=\"450\" y1=\"0\" x2=\"450\" y2=\"280\"/><line x1=\"600\" y1=\"0\" x2=\"600\" y2=\"280\"/>'\n      +       '</g>'\n      +       '<text x=\"640\" y=\"150\" font-family=\"ui-monospace,Consolas,monospace\" font-size=\"150\" font-weight=\"700\" fill=\"#233240\" text-anchor=\"end\">01</text>'\n      +       '<polyline points=\"40,215 150,196 260,150 370,158 480,104 590,118 685,58\" fill=\"none\" stroke=\"' + C.accent + '\" stroke-width=\"3\"/>'\n      +       '<g fill=\"' + C.accent + '\"><circle cx=\"260\" cy=\"150\" r=\"4\"/><circle cx=\"480\" cy=\"104\" r=\"4\"/><circle cx=\"685\" cy=\"58\" r=\"4\"/></g>'\n      +       '<text x=\"24\" y=\"34\" font-family=\"ui-monospace,Consolas,monospace\" font-size=\"13\" letter-spacing=\"2\" fill=\"' + C.panelMuted + '\">' + svgLabel + '</text>'\n      +       '<text x=\"696\" y=\"264\" font-family=\"ui-monospace,Consolas,monospace\" font-size=\"11\" letter-spacing=\"1.5\" fill=\"#8B98A1\" text-anchor=\"end\">TASARIM YEDEĞİ · GÖRSEL BULUNAMADI</text>'\n      +     '</svg>'\n      +   '</div>'\n      +   '<figcaption style=\"padding-top:8px;font-family:' + MONO + ';font-size:11.5px;color:' + C.muted + ';' + WRAP + '\">Kaynak görsel bulunamadı; yerine tasarım yedeği gösteriliyor.</figcaption>'\n      + '</figure>';\n  }\n\n  // ---- Kilit Gerçekler card (star component: dark slate data panel) ----\n  var noktalar = (d.onemli_noktalar || []).filter(function (x) { return has(x); }).slice(0, 4);\n  var cardHtml = '';\n  if (noktalar.length) {\n    var cellsHtml = noktalar.map(function (item) {\n      var st = parseLead(stripTags(item));\n      var cellBase = 'flex:1 1 45%;min-width:150px;box-sizing:border-box;padding:16px;border-top:1px solid ' + C.panelLine + ';' + WRAP;\n      if (st.kind === 'stat') {\n        var unit = st.unit\n          ? '<span style=\"font-size:0.44em;color:' + C.accentUp + ';font-weight:700;margin-left:4px;letter-spacing:0;white-space:nowrap;\">' + esc(st.unit) + '</span>'\n          : '';\n        var lbl = st.label\n          ? '<div style=\"font-family:' + MONO + ';font-size:12px;line-height:1.4;letter-spacing:0.02em;color:' + C.panelMuted + ';margin-top:10px;' + WRAP + '\">' + esc(clip(cap(st.label), 72)) + '</div>'\n          : '';\n        return ''\n          + '<div style=\"' + cellBase + '\">'\n          +   '<div style=\"font-family:' + MONO + ';font-size:clamp(26px,7vw,38px);font-weight:700;line-height:1.02;letter-spacing:-0.01em;color:' + C.panelLight + ';' + WRAPX + '\">' + esc(st.head) + unit + '</div>'\n          +   lbl\n          + '</div>';\n      }\n      // qualitative fact: honest key-fact row with sharp accent marker, no fake number\n      return ''\n        + '<div style=\"' + cellBase + '\">'\n        +   '<div style=\"display:flex;gap:10px;align-items:flex-start;\">'\n        +     '<span style=\"width:8px;height:8px;background:' + C.accentUp + ';display:inline-block;flex:0 0 auto;margin-top:5px;\"></span>'\n        +     '<span style=\"font-family:' + MONO + ';font-size:13.5px;line-height:1.5;letter-spacing:0.01em;color:' + C.panelLight + ';' + WRAP + '\">' + esc(clip(st.text, 130)) + '</span>'\n        +   '</div>'\n        + '</div>';\n    }).join('');\n    cardHtml = ''\n      + '<div style=\"margin:28px ' + PADX + ' 0;background:' + C.accent2 + ';border:1px solid ' + C.panelBorder + ';\">'\n      +   '<div style=\"height:4px;background:' + C.accent + ';\"></div>'\n      +   '<div style=\"padding:18px clamp(16px,4vw,22px) 4px;display:flex;align-items:center;gap:10px;font-family:' + MONO + ';font-size:12px;letter-spacing:0.14em;text-transform:uppercase;color:' + C.panelMuted + ';\">'\n      +     '<span style=\"width:9px;height:9px;background:' + C.accent + ';display:inline-block;\"></span><span>Kilit Gerçekler</span>'\n      +   '</div>'\n      +   '<div style=\"display:flex;flex-wrap:wrap;padding:6px clamp(16px,4vw,22px) 20px;\">' + cellsHtml + '</div>'\n      + '</div>';\n  }\n\n  // ---- body sections (mono index continues at 02, hairline rule, sans h3, measured body) ----\n  var bolumler = (d.bolumler || []).filter(function (b) { return b && (has(b.h3) || has(b.html)); });\n  var sectionBlocks = bolumler.map(function (b, i) {\n    var idx = ('0' + (i + 2)).slice(-2);\n    return ''\n      + '<section style=\"padding:0 ' + PADX + ';margin-top:30px;\">'\n      +   '<div style=\"display:flex;align-items:center;gap:10px;font-family:' + MONO + ';font-size:12px;letter-spacing:0.13em;text-transform:uppercase;color:' + C.muted + ';margin-bottom:10px;\">'\n      +     '<span style=\"color:' + C.accentText + ';font-weight:700;\">' + idx + '</span>' + vbar() + '<span>Bölüm</span>'\n      +   '</div>'\n      +   (has(b.h3) ? '<h3 style=\"font-family:' + SANS + ';font-weight:700;font-size:clamp(19px,4.8vw,22px);line-height:1.25;letter-spacing:-0.005em;color:' + C.ink + ';margin:0 0 10px;' + WRAP + '\">' + txt(b.h3) + '</h3>' : '')\n      +   '<div style=\"font-family:' + SANS + ';font-size:clamp(15.5px,4.2vw,16.5px);line-height:1.65;color:' + C.ink + ';max-width:62ch;' + WRAP + '\">' + sanitize(b.html || '') + '</div>'\n      + '</section>';\n  });\n\n  // ---- pull quote: serif italic, accent rule, left-aligned; placed after first section ----\n  if (has(d.one_cikan_alinti)) {\n    var pullQuoteHtml = ''\n      + '<figure style=\"padding:0 ' + PADX + ';margin:34px 0 0;\">'\n      +   '<div style=\"width:44px;height:3px;background:' + C.accent + ';margin-bottom:16px;\"></div>'\n      +   '<blockquote style=\"margin:0;font-family:' + SERIF + ';font-style:italic;font-weight:400;font-size:clamp(20px,5.2vw,27px);line-height:1.32;letter-spacing:-0.01em;color:' + C.ink + ';' + WRAP + '\">'\n      +     '<span style=\"color:' + C.accent + ';font-weight:700;\">“</span>' + txt(d.one_cikan_alinti) + '<span style=\"color:' + C.accent + ';font-weight:700;\">”</span>'\n      +   '</blockquote>'\n      + '</figure>';\n    if (sectionBlocks.length) sectionBlocks.splice(1, 0, pullQuoteHtml);\n    else sectionBlocks.push(pullQuoteHtml);\n  }\n\n  // ---- Türkiye callout ----\n  var trHtml = '';\n  if (has(d.turkiye_acisi)) {\n    trHtml = ''\n      + '<div style=\"margin:34px ' + PADX + ' 0;background:' + C.tint + ';border-left:3px solid ' + C.accent + ';padding:18px clamp(16px,4vw,22px);\">'\n      +   '<div style=\"font-family:' + MONO + ';font-size:12px;letter-spacing:0.12em;text-transform:uppercase;color:' + C.accent2 + ';font-weight:700;margin-bottom:10px;' + WRAP + '\">Türkiye için ne anlama geliyor?</div>'\n      +   '<p style=\"margin:0;font-family:' + SANS + ';font-size:clamp(15.5px,4.2vw,16.5px);line-height:1.62;color:' + C.ink + ';max-width:62ch;' + WRAP + '\">' + txt(d.turkiye_acisi) + '</p>'\n      + '</div>';\n  }\n\n  // ---- footer: both attributions restated + sharp mono source chips ----\n  var chips = [chip('<span style=\"color:' + C.accentText + ';\">HABER</span> · ' + txt(haberKaynak))];\n  if (img) {\n    chips.push(chip('<span style=\"color:' + C.accentText + ';\">GÖRSEL</span> · Openverse'));\n    if (has(gorsel.source)) chips.push(chip(txt(cap(gorsel.source))));\n    chips.push(chip(esc(licLabel)));\n  }\n  var imgCreditLink = img\n    ? (isHttp(gorsel.landing) ? esc(String(gorsel.landing).trim())\n       : (isHttp(gorsel.url) ? esc(String(gorsel.url).trim()) : 'https://openverse.org/'))\n    : '';\n  var imgAttrLine = img\n    ? '<div style=\"margin-top:5px;' + WRAP + '\"><span style=\"color:' + C.muted + ';\">GÖRSEL &middot; </span><a href=\"' + imgCreditLink + '\" rel=\"nofollow noopener\" target=\"_blank\" style=\"color:' + C.ink + ';text-decoration:none;border-bottom:1px solid ' + C.line + ';' + WRAPX + '\">'\n      + [has(gorsel.creator) ? txt(gorsel.creator) : 'Bilinmiyor', esc(licLabel), has(gorsel.source) ? txt(cap(gorsel.source)) : 'Openverse'].join(' &middot; ')\n      + '</a></div>'\n    : '';\n  var footerHtml = ''\n    + '<div style=\"margin-top:34px;padding:20px ' + PADX + ' clamp(22px,5vw,28px);border-top:1px solid ' + C.line + ';\">'\n    +   '<div style=\"font-family:' + MONO + ';font-size:11.5px;letter-spacing:0.12em;text-transform:uppercase;color:' + C.muted + ';margin-bottom:12px;\">Atıflar</div>'\n    +   '<div style=\"font-family:' + MONO + ';font-size:12px;line-height:1.7;color:' + C.ink + ';' + WRAP + '\">'\n    +     '<div><span style=\"color:' + C.muted + ';\">HABER &middot; </span>'\n    +       (haberLink\n        ? '<a href=\"' + haberLink + '\" rel=\"nofollow noopener\" target=\"_blank\" style=\"color:' + C.ink + ';text-decoration:none;border-bottom:2px solid ' + C.accent + ';' + WRAPX + '\">' + txt(haberKaynak) + '</a>'\n        : txt(haberKaynak))\n    +     '</div>'\n    +     imgAttrLine\n    +   '</div>'\n    +   '<div style=\"display:flex;flex-wrap:wrap;gap:8px;margin-top:14px;\">' + chips.join('') + '</div>'\n    + '</div>';\n\n  // ---- assemble self-contained article on its own painted ground ----\n  return ''\n    + '<div style=\"background:' + C.bg + ';padding:clamp(16px,4vw,32px) clamp(10px,3vw,14px);font-family:' + SANS + ';' + WRAP + '\">'\n    +   '<article lang=\"tr\" style=\"max-width:720px;margin:0 auto;background:' + C.surface + ';color:' + C.ink + ';border:1px solid ' + C.line + ';' + WRAP + '\">'\n    +     '<div style=\"height:4px;background:' + C.accent + ';\"></div>'\n    +     headerHtml\n    +     figHtml\n    +     cardHtml\n    +     sectionBlocks.join('')\n    +     trHtml\n    +     footerHtml\n    +   '</article>'\n    + '</div>';\n}\n\n// ---- montaj ----\nconst x = $json;\nif (x.atla) return [{ json: { atla: true, postId: x.postId, basarili: false } }];\nconst ic = x.icerik || {};\nconst d = {\n  baslik: ic.baslik, ozet: ic.ozet, bolumler: ic.bolumler || [],\n  onemli_noktalar: ic.onemli_noktalar || [], turkiye_acisi: ic.turkiye_acisi || '',\n  one_cikan_alinti: ic.one_cikan_alinti || '', kategori: 'Yapay Zeka',\n  tarih: new Date().toISOString().slice(0,10),\n  gorsel: x.gorsel || null,\n  haber: { kaynak: x.haberKaynak || 'Kaynak', link: x.haberLink || '' },\n};\nconst content = assembleHtml(d);\nreturn [{ json: {\n  atla: false,\n  postId: x.postId,\n  blogId: x.blogId,\n  yeniBaslik: d.baslik,\n  postBody: { kind: 'blogger#post', id: x.postId, title: d.baslik, content: content },\n}}];"
+      }
+    },
+    {
+      "id": "n-up",
+      "name": "Blogger Guncelle",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1820,
+        140
+      ],
+      "parameters": {
+        "method": "PUT",
+        "url": "={{ 'https://www.googleapis.com/blogger/v3/blogs/' + $json.blogId + '/posts/' + $json.postId }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "googleOAuth2Api",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json.postBody) }}",
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "credentials": {
+        "googleOAuth2Api": {
+          "id": "iTqoyVseUDyS4WRY",
+          "name": "Google account"
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 2,
+      "waitBetweenTries": 8000,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "n-kt",
+      "name": "Basariyi Kaydet",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2040,
+        140
+      ],
+      "parameters": {
+        "jsCode": "// Blogger guncelleme yanitini basari olarak isaretle.\nconst x = $('Yaziyi Hazirla').first().json;\nconst y = $json;\nconst basarili = Boolean(y && (y.id || (y.kind === 'blogger#post')));\nreturn [{ json: { basarili: basarili && !x.atla, postId: x.postId, yeniBaslik: x.yeniBaslik } }];"
+      }
+    },
+    {
+      "id": "n-bk",
+      "name": "Bekle",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        2260,
+        140
+      ],
+      "parameters": {
+        "amount": 12,
+        "unit": "seconds"
+      }
+    },
+    {
+      "id": "n-oz",
+      "name": "Ozet",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        720,
+        -160
+      ],
+      "parameters": {
+        "jsCode": "const hepsi = $input.all();\nconst guncellenen = hepsi.filter(i => i.json && i.json.basarili === true);\nreturn [{ json: {\n  toplam_islenen: hepsi.length,\n  guncellenen: guncellenen.length,\n  basliklar: guncellenen.map(i => i.json.yeniBaslik).filter(Boolean),\n  durum: guncellenen.length > 0 ? 'TAMAM - yazilar yeni tasarimla guncellendi' : 'HICBIRI GUNCELLENEMEDI'\n}}];"
+      }
+    }
+  ],
+  "connections": {
+    "Baslat (Webhook)": {
+      "main": [
+        [
+          {
+            "node": "Ayarlar",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ayarlar": {
+      "main": [
+        [
+          {
+            "node": "Yazilari Listele",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Yazilari Listele": {
+      "main": [
+        [
+          {
+            "node": "Yazilari Ayikla",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Yazilari Ayikla": {
+      "main": [
+        [
+          {
+            "node": "Tek Tek Isle",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Tek Tek Isle": {
+      "main": [
+        [
+          {
+            "node": "Ozet",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Gemini Istek",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gemini Istek": {
+      "main": [
+        [
+          {
+            "node": "Gemini Yapilandir",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gemini Yapilandir": {
+      "main": [
+        [
+          {
+            "node": "Icerik Coz",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Icerik Coz": {
+      "main": [
+        [
+          {
+            "node": "Wikimedia Ara",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wikimedia Ara": {
+      "main": [
+        [
+          {
+            "node": "Openverse Yedek",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Openverse Yedek": {
+      "main": [
+        [
+          {
+            "node": "Gorsel Sec",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gorsel Sec": {
+      "main": [
+        [
+          {
+            "node": "Yaziyi Hazirla",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Yaziyi Hazirla": {
+      "main": [
+        [
+          {
+            "node": "Blogger Guncelle",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Blogger Guncelle": {
+      "main": [
+        [
+          {
+            "node": "Basariyi Kaydet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Basariyi Kaydet": {
+      "main": [
+        [
+          {
+            "node": "Bekle",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Bekle": {
+      "main": [
+        [
+          {
+            "node": "Tek Tek Isle",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "Europe/Istanbul"
+  }
+}
