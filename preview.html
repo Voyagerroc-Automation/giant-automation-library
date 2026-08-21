@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Örnek Blog Tasarımı Önizleme</title>
+  <style>
+    body {
+      background-color: #f1f5f9;
+      margin: 0;
+      padding: 40px 20px;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    }
+  </style>
+</head>
+<body>
+
+<style>
+@keyframes pulseSignal {
+  0% { box-shadow: 0 0 0 0 rgba(16,185,129,0.7); transform: scale(1); }
+  70% { box-shadow: 0 0 0 10px rgba(16,185,129,0); transform: scale(1.05); }
+  100% { box-shadow: 0 0 0 0 rgba(16,185,129,0); transform: scale(1); }
+}
+@keyframes gradShimmer {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+</style>
+
+<div style="max-width:820px;margin:0 auto;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;color:#1e293b;background:#ffffff;padding:clamp(20px,5vw,36px);border-radius:22px;box-shadow:0 20px 45px rgba(15,23,42,0.08);border:1px solid #e2e8f0;">
+  
+  <!-- Gradient Bar -->
+  <div style="height:5px;background:linear-gradient(90deg, #6366f1, #06b6d4, #10b981, #ec4899);border-radius:9999px;margin-bottom:24px;"></div>
+  
+  <!-- Live Signal Pill & Metadata -->
+  <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:20px;padding-bottom:14px;border-bottom:1px solid #e2e8f0;">
+    <div style="display:inline-flex;align-items:center;gap:8px;padding:6px 14px;background:#0f172a;border-radius:9999px;font-size:12px;font-weight:700;letter-spacing:0.06em;color:#38bdf8;text-transform:uppercase;">
+      <span style="width:9px;height:9px;border-radius:50%;background:#10b981;display:inline-block;animation:pulseSignal 2s infinite ease-in-out;"></span>
+      <span>CANLI AI SİNYALİ &middot; DERİNLEMESİNE RAPOR</span>
+    </div>
+    <div style="display:flex;align-items:center;gap:10px;font-size:13px;color:#64748b;font-weight:600;">
+      <span>📅 21 Ağustos 2026</span>
+      <span style="color:#cbd5e1;">|</span>
+      <span>⏱️ ~8 DK DETAYLI OKUMA</span>
+    </div>
+  </div>
+
+  <!-- Hero Headline -->
+  <div style="margin-bottom:24px;">
+    <h1 style="font-size:clamp(28px,5.5vw,38px);font-weight:800;line-height:1.2;letter-spacing:-0.025em;color:#0f172a;margin:0 0 16px;">OpenAI Yeni Nesil Otonom Akıl Yürütme Motorunu Duyurdu</h1>
+    <p style="margin:0 0 26px;line-height:1.8;font-size:20px;font-weight:500;color:#0f172a;letter-spacing:-0.015em;">Yapay zeka modellerinin çok adımlı problem çözme ve otonom yazılım geliştirme kabiliyetlerini yeni bir seviyeye taşıyan sistem, benchmark testlerinde rekor kırdı.</p>
+  </div>
+
+  <!-- Cover Media -->
+  <figure style="margin:0 0 32px;position:relative;">
+    <div style="border-radius:18px;overflow:hidden;box-shadow:0 15px 35px rgba(15,23,42,0.12);background:#0f172a;border:1px solid rgba(226,232,240,0.8);">
+      <img src="https://images.unsplash.com/photo-1677442136019-21780efad99a?auto=format&fit=crop&w=1200&q=80" alt="Yapay Zeka Raporu" style="width:100%;height:auto;display:block;aspect-ratio:16/9;object-fit:cover;" loading="lazy"/>
+    </div>
+    <figcaption style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;font-size:12.5px;color:#64748b;margin-top:10px;padding:0 6px;">
+      <span>📸 Orijinal Haber Görseli (TechCrunch AI)</span>
+      <span style="background:#f1f5f9;padding:3px 8px;border-radius:6px;font-weight:600;color:#475569;">Kaynak: TechCrunch AI</span>
+    </figcaption>
+  </figure>
+
+  <!-- Executive Summary Card -->
+  <div style="margin:30px 0;background:#0f172a;color:#f8fafc;border-radius:16px;padding:24px 28px;box-shadow:0 12px 30px rgba(15,23,42,0.18);border:1px solid #1e293b;">
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;font-size:13px;font-weight:800;letter-spacing:0.1em;color:#38bdf8;text-transform:uppercase;">
+      <span>⚡</span><span>Öne Çıkan Kilit Bulgular & Yönetici Özeti</span>
+    </div>
+    <ul style="margin:0;padding-left:22px;color:#e2e8f0;font-size:15.5px;line-height:1.8;">
+      <li style="margin:0 0 10px;">%45 daha düşük gecikme süresi ile karmaşık akıl yürütme performansı.</li>
+      <li style="margin:0 0 10px;">Geliştiriciler için doğrudan API entegrasyonu ve sıfır hata toleranslı kod üretimi.</li>
+      <li style="margin:0 0 10px;">Çoklu ajan koordinasyonunda eş zamanlı 10 kat daha fazla işlem kapasitesi.</li>
+      <li style="margin:0 0 10px;">Kurumsal güvenlik standartlarına tam uyumlu yerel veri işleme desteği.</li>
+    </ul>
+  </div>
+
+  <!-- Body Sections -->
+  <h3 style="margin:40px 0 16px;padding:8px 0 8px 16px;border-left:4px solid #6366f1;line-height:1.35;font-size:22px;font-weight:800;color:#0f172a;letter-spacing:-0.02em;background:linear-gradient(90deg, rgba(99,102,241,0.06) 0%, rgba(255,255,255,0) 100%);border-radius:0 8px 8px 0;">1. Gelişmenin Arka Planı ve Olayın Boyutu</h3>
+  <p style="margin:0 0 20px;line-height:1.85;font-size:17.5px;color:#334155;letter-spacing:-0.01em;">Yapay zeka ekosisteminde uzun süredir devam eden hesaplama gücü ve model verimliliği tartışmaları, yeni nesil akıl yürütme mimarileriyle birlikte farklı bir boyuta taşınıyor. Önceki modellerde karşılaşılan halüsinasyon ve adım atlama problemleri, yeni mimaride yer alan denetimli düşünce zinciri mekanizmaları ile asgariye indirilmiş durumda.</p>
+  
+  <p style="margin:0 0 20px;line-height:1.85;font-size:17.5px;color:#334155;letter-spacing:-0.01em;">Bu gelişme yalnızca teorik bir başarı değil; aynı zamanda kurumsal operasyonlarda otonom karar verici sistemlerin devreye girmesi anlamına geliyor. Şirketler artık karmaşık lojistik, finans ve yazılım mimarilerini bu sistemlere güvenle emanet edebilecek.</p>
+
+  <h3 style="margin:40px 0 16px;padding:8px 0 8px 16px;border-left:4px solid #6366f1;line-height:1.35;font-size:22px;font-weight:800;color:#0f172a;letter-spacing:-0.02em;background:linear-gradient(90deg, rgba(99,102,241,0.06) 0%, rgba(255,255,255,0) 100%);border-radius:0 8px 8px 0;">2. Teknik Mimari ve Öne Çıkan Yetenekler</h3>
+  <p style="margin:0 0 20px;line-height:1.85;font-size:17.5px;color:#334155;letter-spacing:-0.01em;">Yeni sistemin kalbinde, dinamik hesaplama bütçesi tahsis eden yenilikçi bir <strong>özyinelemeli denetim katmanı</strong> bulunuyor. Bu katman sayesinde model, karşılaştığı problemin zorluğuna göre akıl yürütme derinliğini anlık olarak ölçeklendiriyor:</p>
+  
+  <ul style="margin:24px 0 28px;padding:20px 24px 20px 38px;background:#f8fafc;border:1px solid #e2e8f0;border-left:4px solid #0ea5e9;border-radius:12px;line-height:1.8;font-size:16.5px;color:#1e293b;box-shadow:0 4px 12px rgba(0,0,0,0.02);">
+    <li style="margin:0 0 10px;padding-left:4px;"><strong>Adaptif Düşünce Süresi:</strong> Basit görevlerde anlık yanıt, karmaşık mimari problemlerde 30 saniyeye varan derin analiz.</li>
+    <li style="margin:0 0 10px;padding-left:4px;"><strong>Sıfır Hata Doğrulayıcı:</strong> Matematiksel ve mantıksal önermeleri eş zamanlı kontrol eden ikincil denetim motoru.</li>
+    <li style="margin:0 0 10px;padding-left:4px;"><strong>Genişletilmiş Bellek:</strong> 2 Milyon token bağlam penceresi ile büyük ölçekli kurumsal kod depolarının tek seferde taranması.</li>
+  </ul>
+
+  <!-- Pull Quote -->
+  <blockquote style="margin:32px 0;padding:20px 26px;background:linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);border-left:5px solid #ec4899;border-radius:0 14px 14px 0;font-size:19.5px;line-height:1.65;font-style:italic;color:#1e293b;box-shadow:0 6px 20px rgba(236,72,153,0.06);">
+    “Akıl yürütme modellerindeki bu kırılma, yapay zekayı bir yardımcı araçtan bağımsız çalışan bir iş ortağına dönüştürüyor.”
+  </blockquote>
+
+  <!-- Turkey Callout Box -->
+  <div style="margin:38px 0;padding:22px 26px;background:linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);border:1px solid #bbf7d0;border-left:5px solid #10b981;border-radius:14px;">
+    <div style="display:flex;align-items:center;gap:8px;font-size:13px;font-weight:800;letter-spacing:0.08em;color:#15803d;text-transform:uppercase;margin-bottom:10px;">
+      <span>🌐</span><span>Türkiye Ekosistemi & Sektörel Yansımalar</span>
+    </div>
+    <p style="margin:0;font-size:16.5px;line-height:1.75;color:#166534;">Türkiye'deki yazılım geliştiriciler ve teknoloji girişimleri için bu model, özellikle karmaşık SaaS ürünleri ve kurumsal otomasyon süreçlerinde yerli çözümlerin küresel rekabet gücünü katlayacak kritik bir sıçrama tahtası sunuyor.</p>
+  </div>
+
+  <!-- Verified Source Card -->
+  <div style="margin:45px 0 0;padding:24px 28px;background:linear-gradient(135deg, #0f172a 0%, #1e293b 100%);border-radius:16px;color:#f8fafc;box-shadow:0 12px 30px rgba(15,23,42,0.18);border:1px solid #334155;">
+    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:14px;margin-bottom:14px;">
+      <div style="display:flex;align-items:center;gap:10px;">
+        <span style="display:inline-flex;align-items:center;justify-content:center;width:32px;height:32px;background:#6366f1;border-radius:8px;font-size:16px;">📰</span>
+        <div>
+          <div style="font-size:11px;font-weight:700;letter-spacing:0.1em;color:#94a3b8;text-transform:uppercase;">Doğrulanmış Haber Kaynağı</div>
+          <div style="font-size:16px;font-weight:800;color:#ffffff;">TechCrunch AI</div>
+        </div>
+      </div>
+      <a href="https://techcrunch.com/category/artificial-intelligence/" rel="nofollow noopener" target="_blank" style="display:inline-flex;align-items:center;gap:8px;padding:10px 20px;background:linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);color:#ffffff;font-size:13.5px;font-weight:700;text-decoration:none;border-radius:10px;box-shadow:0 4px 14px rgba(99,102,241,0.4);">Orijinal Haberi Görüntüle ↗</a>
+    </div>
+    <p style="margin:0;font-size:13px;line-height:1.6;color:#cbd5e1;border-top:1px solid #334155;padding-top:12px;">
+      🛡️ <strong>Editoryal Şeffaflık & Doğrulama:</strong> Bu kapsamlı analiz, <em>Voyagerroc AI Intelligence Engine</em> tarafından orijinal haber bülteni ve basın verileri taranarak profesyonel uzun formatta hazırlanmıştır.
+    </p>
+  </div>
+
+</div>
+
+</body>
+</html>

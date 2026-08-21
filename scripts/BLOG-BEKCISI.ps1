@@ -1,25 +1,26 @@
-# BLOG-BEKCISI.ps1 — Docker acilisini izler, gunun AI haber yayinini sorar.
+# BLOG-BEKCISI.ps1 — Docker acik oldugu surece AI haber yayinini OTOMATIK tetikler.
 #
-# Ne yapar: arka planda sessizce calisir; Docker Desktop her acildiginda
-# (kapali -> acik gecisinde) vr-n8n saglikli olana kadar bekler, sonra
-# "Gunun 10 blog yazisi yayinlansin mi?" diye sorar. Evet denirse n8n'deki
-# "AI Haber Derlemesi" workflow'unun webhook'unu tetikler.
+# Ne yapar: arka planda sessizce calisir; Docker Desktop acildiginda vr-n8n
+# saglikli olana kadar bekler ve "AI Haber Derlemesi" workflow'unun
+# webhook'unu tetikler (soru sorulmaz). Docker acik kaldigi surece her
+# 3 saatte bir yeniden tetikler; workflow yeni haber bulursa yayinlar,
+# bulamazsa bos gecer.
 #
 # Tasarim notlari:
 #  - SESSIZ PENCERE (08:30-09:35): workflow'un 09:00 zamanlayicisiyla ES
 #    ZAMANLI kosu yarisini onler. n8n static-data kilidi kosu bitene kadar
 #    diske yazilmadigi icin ayni anda baslayan iki kosu birbirini goremez;
-#    bu penceredeki sorular pencere kapanana kadar ertelenir.
+#    penceredeki tetiklemeler ertelenir ve 09:00 kosusu son tetik sayilir.
 #  - DEBOUNCE: 'acik' saymak icin 2 ardisik basarili daemon kontrolu gerekir;
-#    uyku/hibernate donuslerindeki kisa kesintiler soru yagmuruna donmez.
-#  - Mukerrer yayin korumasi bekcide DEGIL, workflow'un icindedir (Gunluk
-#    Kilit + Bloggerda Ara). Iki kez Evet'e basmak ayni gunu iki kez basmaz.
+#    uyku/hibernate donuslerindeki kisa kesintiler tetik yagmuruna donmez.
+#  - Mukerrer yayin korumasi bekcide DEGIL, workflow'dadir: 30 dakikalik
+#    kosu kilidi + 7 gunluk parmak izi filtresi + Bloggerda Ara. Fazladan
+#    tetikleme ayni haberi iki kez basmaz.
 #
 # Kurulum: Baslangic klasorundeki BLOG-BEKCISI.vbs bu betigi oturum acilisinda
 # gizli pencereyle baslatir. Gunluk: %LOCALAPPDATA%\eip-blog-bekcisi.log
 
 $ErrorActionPreference = 'SilentlyContinue'
-Add-Type -AssemblyName System.Windows.Forms | Out-Null
 
 $logDosyasi = Join-Path $env:LOCALAPPDATA 'eip-blog-bekcisi.log'
 function Yaz-Log {
@@ -39,12 +40,13 @@ $yeniMi = $false
 $mutex = New-Object System.Threading.Mutex($true, 'EIPBlogBekcisi', [ref]$yeniMi)
 if (-not $yeniMi) { exit }
 
-Yaz-Log 'Bekci basladi.'
+Yaz-Log 'Bekci basladi (otomatik mod, 3 saat aralikli).'
 
 $webhook = 'http://127.0.0.1:5678/webhook/ai-haber-baslat'
-$ustUsteAcik = 0        # debounce sayaci
-$dockerAcikti = $false  # onceki KARARLI durum
-$bekleyenSoru = $false  # sessiz pencerede ertelenen soru
+$tetikAraligiSaat = 3
+$ustUsteAcik = 0                    # debounce sayaci
+$dockerAcikti = $false              # onceki KARARLI durum
+$sonTetik = [DateTime]::MinValue    # son basarili (veya sayilan) tetikleme
 
 function Test-DockerDaemon {
     $null = docker info 2>$null
@@ -63,51 +65,24 @@ function Sessiz-PenceredeMiyiz {
     return ($dakika -ge 510 -and $dakika -le 575)
 }
 
-function Soruyu-Sor {
+function Tetikle {
+    # Docker yeni acildiysa n8n'in saglikli olmasi surebilir; bekle.
     $hazir = $false
     for ($i = 0; $i -lt 40; $i++) {
         if (Test-N8nSaglikli) { $hazir = $true; break }
         Start-Sleep -Seconds 6
     }
     if (-not $hazir) {
-        Yaz-Log 'n8n 4 dakikada saglikli olmadi; soru sorulmadi.'
-        return
+        Yaz-Log 'n8n 4 dakikada saglikli olmadi; tetikleme atlandi.'
+        return $false
     }
-
-    # ServiceNotification: gizli surecten acilan diyalogun on planda ve
-    # gorunur olmasini garantiler - kullanici soruyu kacirmasin.
-    $cevap = [System.Windows.Forms.MessageBox]::Show(
-        "Docker acildi ve n8n hazir.`n`nGunun 10 AI haber blog yazisi simdi yayinlansin mi?`n`n(Bugun zaten yayin yapildiysa otomasyon kendini korur; mukerrer yayin olmaz.)",
-        'AI Haber Derlemesi',
-        [System.Windows.Forms.MessageBoxButtons]::YesNo,
-        [System.Windows.Forms.MessageBoxIcon]::Question,
-        [System.Windows.Forms.MessageBoxDefaultButton]::Button1,
-        [System.Windows.Forms.MessageBoxOptions]::ServiceNotification)
-
-    if ($cevap -eq [System.Windows.Forms.DialogResult]::Yes) {
-        $gonderildi = $false
-        try {
-            $null = Invoke-RestMethod -Method Post -Uri $webhook -TimeoutSec 15
-            $gonderildi = $true
-        } catch { }
-
-        if ($gonderildi) {
-            Yaz-Log 'Kullanici Evet dedi; webhook tetiklendi.'
-            [System.Windows.Forms.MessageBox]::Show(
-                "Yayin istegi gonderildi. Ilerlemeyi n8n panelinden izleyebilirsiniz:`nhttp://localhost:5678",
-                'AI Haber Derlemesi', 'OK', 'Information',
-                [System.Windows.Forms.MessageBoxDefaultButton]::Button1,
-                [System.Windows.Forms.MessageBoxOptions]::ServiceNotification) | Out-Null
-        } else {
-            Yaz-Log 'Kullanici Evet dedi ama webhook ulasilamadi (workflow aktif olmayabilir).'
-            [System.Windows.Forms.MessageBox]::Show(
-                "Istek gonderilemedi. Workflow henuz Aktif olmayabilir:`nn8n panelinde 'AI Haber Derlemesi' workflow'unu acip sag ustten Active yapin, sonra Docker'i yeniden baslattiginizda tekrar sorulur.",
-                'AI Haber Derlemesi', 'OK', 'Warning',
-                [System.Windows.Forms.MessageBoxDefaultButton]::Button1,
-                [System.Windows.Forms.MessageBoxOptions]::ServiceNotification) | Out-Null
-        }
-    } else {
-        Yaz-Log 'Kullanici Hayir dedi.'
+    try {
+        $null = Invoke-RestMethod -Method Post -Uri $webhook -TimeoutSec 15
+        Yaz-Log 'Webhook tetiklendi (otomatik).'
+        return $true
+    } catch {
+        Yaz-Log 'Webhook ulasilamadi (workflow aktif olmayabilir); 10 dk sonra yeniden denenecek.'
+        return $false
     }
 }
 
@@ -117,20 +92,17 @@ while ($true) {
 
     if ($kararliAcik -and -not $dockerAcikti) {
         Yaz-Log 'Docker acilisi algilandi.'
-        if (Sessiz-PenceredeMiyiz) {
-            Yaz-Log 'Sessiz pencere (08:30-09:35): soru ertelendi, 09:00 zamanlayicisi devrede.'
-            $bekleyenSoru = $true
-        } else {
-            Soruyu-Sor
-        }
     }
 
-    if ($bekleyenSoru -and -not (Sessiz-PenceredeMiyiz)) {
-        # Pencere kapandi: 09:00 kosusu bittiyse Gunluk Kilit soruya Evet
-        # denilse bile ikinci yayini engeller; kosu hic olmadiysa (n8n o an
-        # kapaliydi) bu soru gunu kurtarir.
-        $bekleyenSoru = $false
-        if ($kararliAcik) { Soruyu-Sor }
+    if ($kararliAcik -and ((Get-Date) - $sonTetik).TotalHours -ge $tetikAraligiSaat) {
+        if (Sessiz-PenceredeMiyiz) {
+            # 09:00 zamanlayicisi bu kosuyu yapacak; onu son tetik say ki
+            # pencere kapanir kapanmaz ikinci bir kosu acilmasin.
+            $sonTetik = (Get-Date).Date.AddHours(9)
+        } else {
+            if (Tetikle) { $sonTetik = Get-Date }
+            else { $sonTetik = (Get-Date).AddHours(-$tetikAraligiSaat).AddMinutes(10) }
+        }
     }
 
     if ($kararliAcik) { $dockerAcikti = $true }
