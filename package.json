@@ -4,7 +4,8 @@
   "description": "Voyagerroc Automation - Production-grade n8n Workflows and Automation Templates",
   "scripts": {
     "validate": "node scripts/validate-workflows.js",
-    "sync": "node scripts/sync-workflows.js"
+    "sync": "node scripts/sync-workflows.js",
+    "test": "node scripts/test-workflow-nodes.js"
   },
   "keywords": [
     "n8n",
